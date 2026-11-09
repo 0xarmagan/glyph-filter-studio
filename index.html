@@ -253,7 +253,7 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
   var S = {
     source: 'eez', image: null, imageName: '',
     pass: 5, palette: 'eez', ground: 'light', bg: 'solid', bgColor: '#0c0b1e', invert: false,
-    size: 1000, cell: 6, weight: 0.7, warp: 0.2, halo: 0, glow: 0.15, light: 225,
+    size: 1000, cell: 6, weight: 0.8, warp: 0.15, halo: 0, glow: 0.35, light: 225,
     lightAmt: 0.8, black: 0.05, white: 0.95, gamma: 1, gain: 0.85, edges: 0.3,
     streaks: 0.8, sparks: 0.5, wobble: 0.5,
     seed: 7, scale: 2, compare: false
@@ -267,7 +267,7 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
   var SHAPES = ['eez', 'diamond', 'cube', 'circle', 'triangle', 'hexagon', 'square', 'lines', 'line', 'vbar', 'hbar'];
   var PASSES = ['01 Source', '02 Glyphs', '03 Light', '04 Warp', '05 Bloom'];
   var PAL = {
-    eez: [[0, '#1238ff'], [0.42, '#1748e0'], [0.62, '#1567b4'], [0.8, '#15a568'], [1, '#27e35a']],
+    eez: [[0, '#0f2ef2'], [0.4, '#1440d0'], [0.56, '#17609e'], [0.72, '#14a06a'], [0.88, '#2fd85a'], [1, '#52f06a']],
     electric: [[0, '#1626d8'], [0.3, '#1d5bff'], [0.55, '#2a9dff'], [0.78, '#3ff0d8'], [1, '#66ff7a']],
     brand: [[0, '#4439cb'], [0.45, '#6283bd'], [0.78, '#8ae5ac'], [1, '#3be57e']],
     mono: [[0, '#5a5a5a'], [1, '#ffffff']],
@@ -620,6 +620,16 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
       var k5 = j5 * cols + i5, gx = F[k5 + 1] - F[k5 - 1], gy = F[k5 + cols] - F[k5 - cols];
       E[k5] = Math.min(1, Math.sqrt(gx * gx + gy * gy) * 1.1);
     }
+    // Facing: how much each cell's outward stroke normal points at the light (-1..1).
+    // On a light ground this colours across the stroke: lit edge green, core deep, far edge blue.
+    var FACE = new Float32Array(N);
+    if (light && stageN >= 3) {
+      var Fb = blur(F, 2, 2, 1), lxa = Math.cos(S.light * Math.PI / 180), lya = Math.sin(S.light * Math.PI / 180);
+      for (var j7 = 1; j7 < rows - 1; j7++) for (var i7 = 1; i7 < cols - 1; i7++) {
+        var k7 = j7 * cols + i7, gx7 = (Fb[k7 + 1] - Fb[k7 - 1]) / C, gy7 = (Fb[k7 + cols] - Fb[k7 - cols]) / CH, gm = Math.sqrt(gx7 * gx7 + gy7 * gy7);
+        if (gm > 1e-6) FACE[k7] = (-(gx7 * lxa + gy7 * lya) / gm) * Math.min(1, gm * C * 6);
+      }
+    }
 
     var useSrc = S.palette === 'source' && isImg;
     var stops = (PAL[S.palette] || PAL.electric).map(function (s) {
@@ -650,16 +660,18 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
         return [r * boost * mixB, g * boost * mixB, b * boost * mixB];
       }
       if (light) {
-        // light ground: hue follows the light direction; dense overlaps sink toward deep ink
-        var tl = (1 - la) * d + la * lightAt(i, j) + (hash(i, j, 50) - 0.5) * 0.14;
-        var cl = ramp(tl), sink = Math.min(0.5, Math.max(0, d - 0.45) * 0.9 + E[k] * 0.06);
+        // light ground: a broad top-left→bottom-right drift, plus the stroke's facing to the light;
+        // the stroke core (dense, not facing either way) sinks toward deep ink
+        var fc = FACE[k];
+        var tl = 0.42 + 0.42 * (2 * lightAt(i, j) - 1) * la + 0.26 * fc * la + (hash(i, j, 50) - 0.5) * 0.08;
+        var cl = ramp(tl), sink = Math.min(0.68, Math.max(0, d - 0.3) * 1.4) * (1 - Math.min(1, Math.abs(fc) * 1.1));
         return [cl[0] + (INK[0] - cl[0]) * sink, cl[1] + (INK[1] - cl[1]) * sink, cl[2] + (INK[2] - cl[2]) * sink];
       }
       var lit = d * 0.3 + Math.pow(lightAt(i, j), 1.5) * 1.1 - 0.12;
       var t = d * 0.85 * (1 - la) + la * lit + E[k] * 0.12 + (hash(i, j, 50) - 0.5) * 0.12;
       return ramp(t);
     };
-    var INK = [10, 46, 78];
+    var INK = [10, 30, 92];
     var curve = isImg ? function (d) { return d * 1.05; } : function (d) { return Math.min(1.2, Math.pow(d, 1.4) * 1.5); };
 
     // glow under
@@ -703,6 +715,17 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
        G(['######', '#....#', '#.##.#', '#.##.#', '#.##.#', '#....#', '######', '......'])]
     ];
     var TH = [0.035, 0.1, 0.21, 0.35, 0.5, 0.7, 0.92];
+    // Light ground atlas: rounded rings that fill the cell and grow with density.
+    var LVL = [
+      [G(['......', '......', '..##..', '..##..', '......', '......'])],
+      [G(['......', '..##..', '.####.', '.####.', '..##..', '......'])],
+      [G(['......', '.####.', '.#..#.', '.#..#.', '.####.', '......'])],
+      [G(['.####.', '#....#', '#....#', '#....#', '#....#', '.####.'])],
+      [G(['.####.', '######', '##..##', '##..##', '######', '.####.'])],
+      [G(['.####.', '######', '##..##', '##..##', '######', '.####.'])],
+      [G(['######', '######', '##..##', '##..##', '######', '######'])]
+    ];
+    var DOTS = [LVL[0][0], LVL[1][0], G(['......', '......', '..#...', '..#...', '......', '......'])];
 
     var gl = document.createElement('canvas'); gl.width = SW; gl.height = SH;
     var gctx = gl.getContext('2d'), img = gctx.createImageData(SW, SH), buf = img.data;
@@ -725,14 +748,17 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
       }
     };
     // light ground: bolder glyph pixels and fewer dropped ones, so ink reads on white
-    var pu = light ? Math.max(1.3, u * 1.3) : Math.max(1, u), drop = stageN >= 4 ? S.warp * (light ? 0.08 : 0.3) : 0, cellId = 0;
+    // light ground: a 6×6 atlas scaled to fill the cell, slightly fat pixels, nothing dropped
+    var uL = C / 6.6, pu = light ? uL * 1.2 : Math.max(1, u), drop = stageN >= 4 && !light ? S.warp * 0.3 : 0, cellId = 0;
     var stamp = function (glyph, ox, oy, col, a) {
       cellId++;
+      var uu = light ? uL : u;
+      if (light) { ox = ox - (C - 6 * u) / 2 + (C - 6 * uL) / 2; oy = oy - (CH - 8 * u) / 2 + (CH - 6 * uL) / 2; }
       for (var p = 0; p < glyph.length; p++) {
         var hp = hash(cellId, p, 80);
         if (hp < drop) continue;
         var dx = drop && hp > 0.97 ? u : 0;
-        put(ox + glyph[p][0] * u + dx, oy + glyph[p][1] * u, pu, pu, col[0], col[1], col[2], a * (0.7 + 0.3 * hash(cellId, p, 81)));
+        put(ox + glyph[p][0] * uu + dx, oy + glyph[p][1] * uu, pu, pu, col[0], col[1], col[2], a * ((light ? 0.88 : 0.7) + (light ? 0.12 : 0.3) * hash(cellId, p, 81)));
       }
     };
     var rowShift = new Float32Array(rows);
@@ -754,14 +780,14 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
       // long trails leave the column's outermost strokes; between strokes they stay short
       var tp = -1, bt = -1;
       for (var r5 = 0; r5 < rows; r5++) if (F[r5 * cols + c3] > 0.2) { if (tp < 0) tp = r5; bt = r5; }
-      var len = Math.max(1, rows * (0.008 + 0.11 * Math.pow(hash(c3, 5, 90), 3)) * S.streaks * 2);
-      var decOut = Math.exp(-1 / len), decIn = Math.exp(-1 / Math.max(0.6, len * 0.12)), dn = 0, up = 0;
+      var len = Math.max(1, rows * (0.006 + 0.1 * Math.pow(hash(c3, 5, 90), 3)) * S.streaks * 2);
+      var decOut = Math.exp(-1 / len), decIn = Math.exp(-1 / Math.max(0.6, len * 0.3)), dn = 0, up = 0;
       for (var r3 = 0; r3 < rows; r3++) { var k3 = r3 * cols + c3; dn = Math.max(F[k3], dn * (r3 > bt ? decOut : decIn)); V[k3] = dn; }
       for (var r4 = rows - 1; r4 >= 0; r4--) { var k6 = r4 * cols + c3; up = Math.max(F[k6], up * (r4 < tp ? decOut : decIn)); V[k6] = Math.max(V[k6], up) - F[k6]; }
     }
     var streakAt = function (i, j) {
       if (!doStreak) return 0;
-      return V[j * cols + i] * (0.25 + 0.75 * colGain[i]) * S.streaks * 1.7;
+      return V[j * cols + i] * (0.15 + 0.85 * colGain[i]) * S.streaks * 1.5;
     };
 
     for (var j4 = 0; j4 < rows; j4++) for (var i4 = 0; i4 < cols; i4++) {
@@ -777,25 +803,26 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
       for (var q4 = TH.length - 1; q4 >= 0; q4--) if (lum >= TH[q4]) { lvl = q4; break; }
       if (lvl < 0) {
         var sv = streakAt(i4, j4);
-        if (sv > 0.04 + 0.4 * hash(i4, j4, 91)) {
-          stamp(STREAK[Math.floor(hash(i4, j4, 92) * STREAK.length)], ox, oy, colorAt(i4, j4, 0.25), Math.min(0.95, 0.3 + sv * 1.4));
+        if (sv > 0.03 + 0.32 * hash(i4, j4, 91)) {
+          var sg = light ? DOTS[sv > 0.45 ? 1 : sv > 0.18 ? 0 : 2] : STREAK[Math.floor(hash(i4, j4, 92) * STREAK.length)];
+          stamp(sg, ox, oy, colorAt(i4, j4, 0.25), Math.min(0.95, 0.35 + sv * 1.4));
         } else if (stageN >= 4 && S.halo > 0) {
           var hv = H[k4] * colGain[i4] * S.halo * 4;
           if (hv > (light ? 0.14 + 0.2 * hash(i4, j4, 72) : 0.05 + 0.1 * hash(i4, j4, 72))) stamp(LV[0][0], ox, oy, colorAt(i4, j4, 0.2), Math.min(0.9, 0.25 + hv * 1.5));
         }
         continue;
       }
-      var variants = LV[lvl], glyph = variants[Math.floor(hash(i4, j4, 73) * variants.length)];
-      stamp(glyph, ox, oy, colorAt(i4, j4, d4), Math.min(1, (light ? 0.55 : 0.35) + 0.75 * lum));
+      var variants = (light ? LVL : LV)[lvl], glyph = variants[Math.floor(hash(i4, j4, 73) * variants.length)];
+      stamp(glyph, ox, oy, colorAt(i4, j4, d4), Math.min(1, (light ? 0.72 : 0.35) + 0.75 * lum));
     }
 
     // sparks: sparse solid squares scattered just outside the strokes
     if (stageN >= 4 && S.sparks > 0) {
-      var want = Math.round(S.sparks * N * 0.012), placed = 0;
-      for (var t5 = 0; t5 < want * 20 && placed < want; t5++) {
+      var want = Math.round(S.sparks * N * (light ? 0.016 : 0.012)), placed = 0;
+      for (var t5 = 0; t5 < want * 30 && placed < want; t5++) {
         var kk = Math.floor(hash(t5, 7, 95) * N), ci = kk % cols, cj = (kk / cols) | 0;
-        if (F[kk] > 0.18 || H[kk] < 0.02 || hash(t5, 8, 96) > H[kk] * 8) continue;
-        var sz = u * (1.5 + 9 * Math.pow(hash(t5, 9, 97), 3));
+        if (F[kk] > 0.18 || H[kk] < (light ? 0.008 : 0.02) || hash(t5, 8, 96) > H[kk] * (light ? 14 : 8)) continue;
+        var sz = (light ? C / 6 : u) * (1.5 + (light ? 7 : 9) * Math.pow(hash(t5, 9, 97), 2.5));
         var cc5 = colorAt(ci, cj, 0.15 + 0.3 * hash(t5, 10, 98));
         put(ci * C + (C - sz) / 2, cj * CH + (CH - sz) / 2, sz, sz, cc5[0], cc5[1], cc5[2], 0.75 + 0.25 * hash(t5, 11, 99));
         placed++;
@@ -818,8 +845,16 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
       }
       ctx.globalAlpha = 1;
     }
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(gl, 0, 0, W, WH);
+    if (light && stageN >= 5 && typeof ctx.filter === 'string') {
+      // light ground: the crisp layer gets a hair of softness, like ink that bled a little
+      ctx.imageSmoothingEnabled = true;
+      ctx.filter = 'blur(' + (0.45 * dpr * scale).toFixed(2) + 'px)';
+      ctx.drawImage(gl, 0, 0, W, WH);
+      ctx.filter = 'none';
+    } else {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(gl, 0, 0, W, WH);
+    }
     ctx.globalCompositeOperation = 'source-over';
     return { w: SW, h: SH, cells: cols * rows };
   }
