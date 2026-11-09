@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glyph separators</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1640px; height: 1200px; box-sizing: border-box; padding: 56px 64px; display: flex; flex-direction: column; gap: 36px; background-color: #0a0a0a; background-image: linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px); background-size: 42px 42px; color: #ffffff; font-family: 'Suisse Intl', system-ui, -apple-system, 'Segoe UI', sans-serif">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<p style="margin: 0; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 12.5px; line-height: 1.4; letter-spacing: 0.1em; color: #9aa3b3">[ SEPARATORS ]</p>
+<h1 style="margin: 0; font-size: 44px; line-height: 1.1; font-weight: 700">Dividers <span style="font-weight: 300; color: #d8d8d8">in the glyph matrix</span></h1>
+</div>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px">
+<sc-for list="{{verticals}}" as="item" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="height: 560px; border: 1px solid #2e2e2e; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: linear-gradient(180deg, #0c0c0e 0%, #11101c 30%, #1b1745 62%, #2b2478 100%)">
+<div style="width: 120px; height: 480px">
+<dc-import name="Figure" shape="vbar" size="{{item.w}}" height="{{item.h}}" clear="{{item.clear}}" palette="{{item.palette}}" light="{{item.light}}" weight="{{item.weight}}" halo="{{item.halo}}" glow="{{item.glow}}" warp="{{item.warp}}" seed="{{item.seed}}" hint-size="120px,480px"></dc-import>
+</div>
+</div>
+<p style="margin: 0; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; color: #9aa3b3">{{item.label}}</p>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 24px">
+<sc-for list="{{horizontals}}" as="item" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="height: 120px; border: 1px solid #2e2e2e; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: linear-gradient(180deg, #1b1745 0%, #2b2478 100%)">
+<div style="width: 1400px; height: 60px">
+<dc-import name="Figure" shape="hbar" size="{{item.w}}" height="{{item.h}}" clear="{{item.clear}}" palette="{{item.palette}}" light="{{item.light}}" weight="{{item.weight}}" halo="{{item.halo}}" glow="{{item.glow}}" warp="{{item.warp}}" seed="{{item.seed}}" hint-size="1400px,60px"></dc-import>
+</div>
+</div>
+<p style="margin: 0; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; color: #9aa3b3">{{item.label}}</p>
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1640,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var mk = function (label, w, h, palette, light, weight, halo, glow, seed) {
+      return { label: label, w: w, h: h, clear: true, palette: palette, light: light, weight: weight, halo: halo, glow: glow, warp: 0.4, seed: seed };
+    };
+    return {
+      verticals: [
+        mk('01  LOGO GRADIENT', 120, 480, 'brand', 270, 0.9, 0.5, 0.5, 7),
+        mk('02  SIDE-LIT', 120, 480, 'brand', 0, 0.9, 0.5, 0.5, 19),
+        mk('03  ELECTRIC', 120, 480, 'electric', 270, 0.9, 0.5, 0.5, 31),
+        mk('04  HAIRLINE', 120, 480, 'brand', 270, 0.5, 0.3, 0.35, 43),
+        mk('05  HEAVY', 120, 480, 'electric', 270, 1.5, 0.7, 0.8, 55)
+      ],
+      horizontals: [
+        mk('06  RULE', 1400, 60, 'brand', 180, 0.8, 0.3, 0.4, 67),
+        mk('07  HAIRLINE RULE', 1400, 60, 'brand', 180, 0.55, 0.2, 0.3, 79)
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

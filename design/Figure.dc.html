@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glyph-matrix figure</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: {{size}}px; height: {{height}}px; background: {{bg}}; overflow: hidden">
+<canvas ref="{{setCanvas}}" role="img" aria-label="{{label}}" style="display: block; width: {{size}}px; height: {{height}}px"></canvas>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"shape":{"editor":"enum","options":["line","lines","triangle","square","circle","hexagon","diamond","cube","vbar","hbar"],"default":"diamond","section":"Figure"},"weight":{"editor":"range","min":0.4,"max":2,"step":0.05,"default":1,"section":"Figure"},"size":{"editor":"int","min":40,"max":2000,"default":480,"unit":"px","section":"Figure"},"height":{"editor":"int","min":40,"max":2000,"default":480,"unit":"px","section":"Figure"},"clear":{"editor":"boolean","default":false,"section":"Figure"},"stage":{"editor":"range","min":1,"max":5,"step":1,"default":5,"section":"Filter"},"cell":{"editor":"range","min":5,"max":27,"step":1,"default":9,"unit":"px","section":"Filter"},"warp":{"editor":"range","min":0,"max":1,"step":0.05,"default":0.5,"section":"Filter"},"halo":{"editor":"range","min":0,"max":1,"step":0.05,"default":0.6,"section":"Filter"},"glow":{"editor":"range","min":0,"max":1,"step":0.05,"default":0.5,"section":"Filter"},"light":{"editor":"range","min":0,"max":360,"step":5,"default":225,"unit":"deg","section":"Filter"},"palette":{"editor":"enum","options":["electric","brand","mono"],"default":"electric","section":"Filter"},"seed":{"editor":"int","min":1,"max":9999,"default":7,"section":"Filter"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+  componentDidMount() { this.draw(); }
+  componentDidUpdate() { this.draw(); }
+
+  cfg() {
+    var p = this.props;
+    var num = function (v, d) { var n = Number(v); return v !== undefined && v !== null && v !== '' && isFinite(n) ? n : d; };
+    return {
+      shape: p.shape || 'diamond',
+      weight: num(p.weight, 1),
+      size: Math.max(40, Math.min(2000, Math.round(num(p.size, 480)))),
+      height: Math.max(40, Math.min(2000, Math.round(num(p.height, num(p.size, 480))))),
+      clear: p.clear === true || p.clear === 'true',
+      cell: Math.max(5, Math.min(27, Math.round(num(p.cell, 9)))),
+      warp: num(p.warp, 0.5),
+      halo: num(p.halo, 0.6),
+      glow: num(p.glow, 0.5),
+      light: num(p.light, 225),
+      stage: Math.max(1, Math.min(5, Math.round(num(p.stage, 5)))),
+      seed: Math.round(num(p.seed, 7)),
+      palette: p.palette || 'electric'
+    };
+  }
+
+  renderVals() {
+    var self = this;
+    if (!this._ref) { this._ref = function (el) { self.cv = el; if (el) self.draw(); }; }
+    var c = this.cfg();
+    return { setCanvas: this._ref, size: c.size, height: c.height, bg: c.clear ? 'transparent' : '#000000', label: 'Glyph-matrix rendering of a ' + c.shape };
+  }
+
+  // Pass 1 source: plain white geometry, thick bands plus a soft body fill.
+  paintShape(g, shape, SW, SH, k, m, alpha, FILL) {
+    var S = Math.min(SW, SH), cx = SW / 2, cy = SH / 2, R = S * 0.3, w = S * 0.042 * k * m, PI = Math.PI;
+    g.strokeStyle = 'rgba(255,255,255,' + alpha + ')'; g.fillStyle = '#fff';
+    g.lineWidth = w; g.lineJoin = 'miter'; g.miterLimit = 6; g.lineCap = 'square';
+    var poly = function (pts, fill) {
+      g.beginPath();
+      for (var i = 0; i < pts.length; i++) { if (i) g.lineTo(pts[i][0], pts[i][1]); else g.moveTo(pts[i][0], pts[i][1]); }
+      g.closePath();
+      if (fill) { g.globalAlpha = fill; g.fill(); g.globalAlpha = 1; }
+      g.stroke();
+    };
+    var seg = function (a, b, lw) { g.save(); if (lw) g.lineWidth = lw; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.restore(); };
+    var reg = function (n, r, rot, oy) {
+      var out = [];
+      for (var i = 0; i < n; i++) { var t = rot + i * 2 * PI / n; out.push([cx + r * Math.cos(t), cy + (oy || 0) + r * Math.sin(t)]); }
+      return out;
+    };
+    if (shape === 'vbar' || shape === 'hbar') {
+      // separator: a straight bar with square ends, sized from its short side
+      var v = shape === 'vbar', bw = S * 0.2 * k * m, inset = (v ? SH : SW) * 0.06;
+      g.lineCap = 'butt';
+      seg(v ? [cx, inset] : [inset, cy], v ? [cx, SH - inset] : [SW - inset, cy], bw);
+    } else if (shape === 'line') {
+      seg([cx - R * 0.5, cy + R * 1.2], [cx + R * 0.5, cy - R * 1.2], w * 1.4);
+    } else if (shape === 'lines') {
+      for (var i = -1; i <= 1; i++) { var dx = i * R * 0.66; seg([cx + dx - R * 0.35, cy + R * 1.15], [cx + dx + R * 0.35, cy - R * 1.15], w); }
+    } else if (shape === 'triangle') {
+      poly(reg(3, R * 1.2, -PI / 2, R * 0.2), FILL);
+    } else if (shape === 'square') {
+      poly(reg(4, R * 1.15, PI / 4, 0), FILL);
+    } else if (shape === 'circle') {
+      g.beginPath(); g.arc(cx, cy, R, 0, 2 * PI);
+      g.globalAlpha = FILL; g.fill(); g.globalAlpha = 1; g.stroke();
+    } else if (shape === 'hexagon') {
+      poly(reg(6, R * 1.1, -PI / 2, 0), FILL);
+    } else if (shape === 'cube') {
+      var h = reg(6, R * 1.12, -PI / 2, 0);
+      poly(h, FILL);
+      seg([cx, cy], h[1]); seg([cx, cy], h[3]); seg([cx, cy], h[5]);
+    } else {
+      var hY = R * 1.38, hX = R * 0.84;
+      poly([[cx, cy - hY], [cx + hX, cy], [cx, cy + hY], [cx - hX, cy]], FILL);
+      var s = 0.42;
+      poly([[cx, cy - hY * s], [cx + hX * s, cy], [cx, cy + hY * s], [cx - hX * s, cy]], 0);
+      seg([cx, cy - hY], [cx, cy + hY], w * 0.4);
+    }
+  }
+
+  draw() {
+    var cv = this.cv; if (!cv || !cv.getContext) return;
+    var c = this.cfg(), SW = c.size, SH = c.height, S = Math.min(SW, SH), C = c.cell, stage = c.stage, seed = c.seed;
+    var CH = Math.round(C * 10 / 9);           // cells are a touch taller than wide
+    var u = C / 9;                              // glyph pixel unit
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var W = Math.round(SW * dpr), WH = Math.round(SH * dpr);
+    if (cv.width !== W || cv.height !== WH) { cv.width = W; cv.height = WH; }
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.clearRect(0, 0, W, WH);
+    if (!c.clear) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, WH); }
+
+    // ---- source raster, sampled per cell ----
+    var o = document.createElement('canvas'); o.width = SW; o.height = SH;
+    var g = o.getContext('2d');
+    // three layers: a wide soft falloff, the band, a thin bright core
+    this.paintShape(g, c.shape, SW, SH, c.weight, 3, 0.1, 0.05);
+    this.paintShape(g, c.shape, SW, SH, c.weight, 1.3, 0.2, 0);
+    this.paintShape(g, c.shape, SW, SH, c.weight, 0.5, 1, 0);
+    var px = g.getImageData(0, 0, SW, SH).data;
+    var cols = Math.ceil(SW / C), rows = Math.ceil(SH / CH), N = cols * rows;
+    var D = new Float32Array(N);
+    for (var j = 0; j < rows; j++) for (var i = 0; i < cols; i++) {
+      var sum = 0, n = 0, y1 = Math.min(SH, (j + 1) * CH), x1 = Math.min(SW, (i + 1) * C);
+      for (var yy = j * CH; yy < y1; yy += 2) for (var xx = i * C; xx < x1; xx += 2) { sum += px[(yy * SW + xx) * 4 + 3]; n++; }
+      D[j * cols + i] = n ? sum / n / 255 : 0;
+    }
+    var blur = function (src, rx, ry, passes) {
+      var a = src;
+      for (var p = 0; p < passes; p++) {
+        var t = new Float32Array(N), b = new Float32Array(N);
+        for (var j = 0; j < rows; j++) for (var i = 0; i < cols; i++) {
+          var s = 0, n = 0;
+          for (var d = -rx; d <= rx; d++) { var ii = i + d; if (ii >= 0 && ii < cols) { s += a[j * cols + ii]; n++; } }
+          t[j * cols + i] = s / n;
+        }
+        for (var j2 = 0; j2 < rows; j2++) for (var i2 = 0; i2 < cols; i2++) {
+          var s2 = 0, n2 = 0;
+          for (var d2 = -ry; d2 <= ry; d2++) { var jj = j2 + d2; if (jj >= 0 && jj < rows) { s2 += t[jj * cols + i2]; n2++; } }
+          b[j2 * cols + i2] = s2 / n2;
+        }
+        a = b;
+      }
+      return a;
+    };
+    var Bs = D;
+    var H = blur(D, 3, 6, 3);                   // tall halo: feeds the dot columns
+
+    // ---- noise ----
+    var hash = function (a, b, ch) {
+      var h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) + Math.imul(ch | 0, 1442695041) + Math.imul(seed | 0, -2048144777)) | 0;
+      h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16;
+      return (h >>> 0) / 4294967296;
+    };
+    var vnoise = function (x, y, ch) {
+      var xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+      var uu = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+      var a = hash(xi, yi, ch), b = hash(xi + 1, yi, ch), cc = hash(xi, yi + 1, ch), d = hash(xi + 1, yi + 1, ch);
+      return a + (b - a) * uu + (cc - a) * v + (a - b - cc + d) * uu * v;
+    };
+    var sample = function (arr, x, y) {
+      x = Math.max(0, Math.min(cols - 1.001, x)); y = Math.max(0, Math.min(rows - 1.001, y));
+      var xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, k = yi * cols + xi;
+      var a = arr[k], b = arr[k + 1], cc = arr[k + cols], d = arr[k + cols + 1];
+      return (a * (1 - fx) + b * fx) * (1 - fy) + (cc * (1 - fx) + d * fx) * fy;
+    };
+
+    // ---- field: domain-warped density ----
+    var F = new Float32Array(N), warp = stage >= 4 ? c.warp : 0;
+    for (var j3 = 0; j3 < rows; j3++) for (var i3 = 0; i3 < cols; i3++) {
+      var wx = (vnoise(i3 / 4, j3 / 4, 41) - 0.5) * 2 + (vnoise(i3 / 1.5, j3 / 1.5, 43) - 0.5) * 0.8;
+      var wy = (vnoise(i3 / 4, j3 / 4, 42) - 0.5) * 2 + (vnoise(i3 / 1.5, j3 / 1.5, 44) - 0.5) * 0.8;
+      var v = sample(Bs, i3 + wx * warp * 1.1, j3 + wy * warp * 1.1);
+      F[j3 * cols + i3] = Math.min(1, v * 1.1);
+    }
+
+    // ---- rim: gradient magnitude, so band edges catch the light ----
+    var E = new Float32Array(N);
+    for (var j5 = 1; j5 < rows - 1; j5++) for (var i5 = 1; i5 < cols - 1; i5++) {
+      var k5 = j5 * cols + i5, gx = F[k5 + 1] - F[k5 - 1], gy = F[k5 + cols] - F[k5 - cols];
+      E[k5] = Math.min(1, Math.sqrt(gx * gx + gy * gy) * 1.1);
+    }
+
+    // ---- colour ----
+    var PAL = {
+      electric: [[0, '#1626d8'], [0.3, '#1d5bff'], [0.55, '#2a9dff'], [0.78, '#3ff0d8'], [1, '#66ff7a']],
+      brand: [[0, '#4439cb'], [0.45, '#6283bd'], [0.78, '#8ae5ac'], [1, '#3be57e']],
+      mono: [[0, '#5a5a5a'], [1, '#ffffff']]
+    };
+    var stops = (PAL[c.palette] || PAL.electric).map(function (s) {
+      var hx = s[1]; return [s[0], parseInt(hx.slice(1, 3), 16), parseInt(hx.slice(3, 5), 16), parseInt(hx.slice(5, 7), 16)];
+    });
+    var rgb = function (t) {
+      t = Math.max(0, Math.min(1, t));
+      for (var q = 1; q < stops.length; q++) {
+        if (t <= stops[q][0] || q === stops.length - 1) {
+          var s0 = stops[q - 1], s1 = stops[q], f = Math.max(0, Math.min(1, (t - s0[0]) / Math.max(1e-6, s1[0] - s0[0])));
+          return [s0[1] + (s1[1] - s0[1]) * f, s0[2] + (s1[2] - s0[2]) * f, s0[3] + (s1[3] - s0[3]) * f];
+        }
+      }
+    };
+    var ang = c.light * Math.PI / 180, lx = Math.cos(ang), ly = Math.sin(ang);
+    var isBar = c.shape === 'vbar' || c.shape === 'hbar', R = isBar ? Math.max(SW, SH) * 0.5 : S * 0.36;
+    var lightAt = function (i, j) {
+      var nx = ((i + 0.5) * C - SW / 2) / R, ny = ((j + 0.5) * CH - SH / 2) / R;
+      return (Math.max(-1, Math.min(1, nx * lx + ny * ly)) + 1) / 2;
+    };
+    var tAt = function (i, j, d) {
+      if (stage < 3) return -1;
+      return d * 0.3 + Math.pow(lightAt(i, j), 1.5) * 1.1 - 0.12 + E[j * cols + i] * 0.12 + (hash(i, j, 50) - 0.5) * 0.12;
+    };
+
+    // ---- pass: soft glow under the glyphs ----
+    if (stage === 1 || (stage >= 5 && c.glow > 0)) {
+      var lo = document.createElement('canvas'); lo.width = cols; lo.height = rows;
+      var lg = lo.getContext('2d'), lid = lg.createImageData(cols, rows);
+      for (var k2 = 0; k2 < N; k2++) {
+        var ii2 = k2 % cols, jj2 = (k2 / cols) | 0, f2 = stage === 1 ? D[k2] : F[k2];
+        var col2 = stage === 1 ? [255, 255, 255] : rgb(tAt(ii2, jj2, f2) - 0.15);
+        lid.data[k2 * 4] = col2[0]; lid.data[k2 * 4 + 1] = col2[1]; lid.data[k2 * 4 + 2] = col2[2];
+        lid.data[k2 * 4 + 3] = Math.round(255 * Math.min(1, stage === 1 ? f2 : f2 * c.glow * 0.75 * (0.35 + lightAt(ii2, jj2))));
+      }
+      lg.putImageData(lid, 0, 0);
+      ctx.imageSmoothingEnabled = stage !== 1;
+      if (stage !== 1 && typeof ctx.filter === 'string') ctx.filter = 'blur(' + Math.round(C * dpr * 0.6) + 'px)';
+      ctx.drawImage(lo, 0, 0, cols * C * dpr, rows * CH * dpr);
+      ctx.filter = 'none';
+      if (stage === 1) return;
+    }
+
+    // ---- glyph atlas: 6×8 pixel bitmaps, ordered by ink ----
+    var G = function (rowsTxt) { var pts = []; rowsTxt.forEach(function (r, y) { for (var x = 0; x < r.length; x++) if (r[x] === '#') pts.push([x, y]); }); return pts; };
+    var LV = [
+      [G(['......', '......', '......', '..##..', '..##..', '......', '......', '......'])],
+      [G(['......', '..##..', '..##..', '......', '......', '..##..', '..##..', '......']),
+       G(['......', '......', '..##..', '..##..', '..##..', '..##..', '......', '......']),
+       G(['......', '......', '.##.#.', '......', '......', '.#.##.', '......', '......'])],
+      [G(['......', '......', '.###..', '.#....', '.#..#.', '..###.', '......', '......']),
+       G(['......', '......', '.##.#.', '.#..#.', '.#....', '.####.', '......', '......']),
+       G(['......', '.##...', '.#....', '.#....', '.#....', '.##...', '......', '......']),
+       G(['......', '...##.', '....#.', '....#.', '....#.', '...##.', '......', '......'])],
+      [G(['......', '......', '.####.', '.#..#.', '.#..#.', '.####.', '......', '......']),
+       G(['......', '.####.', '#....#', '#....#', '#....#', '.####.', '......', '......']),
+       G(['......', '.###..', '#....#', '#....#', '#.....', '.####.', '......', '......'])],
+      [G(['.####.', '#....#', '#....#', '#....#', '#....#', '#....#', '.####.', '......']),
+       G(['######', '#....#', '#....#', '#....#', '#....#', '#.....', '###.##', '......'])],
+      [G(['######', '#....#', '#....#', '#....#', '#....#', '#....#', '######', '......']),
+       G(['######', '#....#', '#.##.#', '#.##.#', '#....#', '#....#', '######', '......'])],
+      [G(['######', '######', '##..##', '##..##', '##..##', '######', '######', '......']),
+       G(['######', '#....#', '#.##.#', '#.##.#', '#.##.#', '#....#', '######', '......'])]
+    ];
+    var TH = [0.035, 0.1, 0.21, 0.35, 0.5, 0.7, 0.92];
+
+    // ---- glyph layer, written straight into pixels ----
+    var gl = document.createElement('canvas'); gl.width = SW; gl.height = SH;
+    var gctx = gl.getContext('2d'), img = gctx.createImageData(SW, SH), buf = img.data;
+    var put = function (x, y, w, h, r, gg, b, a) {
+      var x0 = Math.max(0, Math.round(x)), y0 = Math.max(0, Math.round(y));
+      var x1 = Math.min(SW, Math.round(x + w)), y1 = Math.min(SH, Math.round(y + h));
+      for (var yy = y0; yy < y1; yy++) for (var xx = x0; xx < x1; xx++) {
+        var q = (yy * SW + xx) * 4;
+        buf[q] = Math.min(255, buf[q] + r * a); buf[q + 1] = Math.min(255, buf[q + 1] + gg * a); buf[q + 2] = Math.min(255, buf[q + 2] + b * a);
+        buf[q + 3] = 255;
+      }
+    };
+    var pu = Math.max(1, u);
+    var drop = stage >= 4 ? c.warp * 0.3 : 0, cellId = 0;
+    var stamp = function (glyph, ox, oy, col, a) {
+      cellId++;
+      for (var p = 0; p < glyph.length; p++) {
+        var hp = hash(cellId, p, 80);
+        if (hp < drop) continue;
+        var dx = drop && hp > 0.97 ? u : 0;
+        put(ox + glyph[p][0] * u + dx, oy + glyph[p][1] * u, pu, pu, col[0], col[1], col[2], a * (0.7 + 0.3 * hash(cellId, p, 81)));
+      }
+    };
+    var rowShift = new Float32Array(rows);
+    if (stage >= 5) for (var r2 = 0; r2 < rows; r2++) rowShift[r2] = hash(r2, 3, 61) < 0.07 * c.warp ? Math.round((hash(r2, 4, 62) - 0.5) * 6) * u : 0;
+    var colGain = new Float32Array(cols);
+    for (var c2 = 0; c2 < cols; c2++) colGain[c2] = hash(c2, 1, 63) < 0.15 ? 0.2 * hash(c2, 2, 64) : 0.5 + 0.8 * hash(c2, 2, 64);
+    var white = [255, 255, 255];
+
+    for (var j4 = 0; j4 < rows; j4++) for (var i4 = 0; i4 < cols; i4++) {
+      var k4 = j4 * cols + i4, d4 = F[k4];
+      var lum = Math.min(1.2, Math.pow(d4, 1.4) * 1.5) * (stage >= 3 ? 0.65 + 0.7 * lightAt(i4, j4) : 1) + (stage >= 3 ? E[k4] * 0.1 : 0);
+      if (stage >= 4) {
+        lum += (hash(i4, j4, 70) - 0.5) * 0.14;                       // dither
+        if (d4 > 0.25 && vnoise(i4 / 2.6, j4 / 2.6, 71) > 1 - c.warp * 0.3) lum *= 0.25;  // holes
+      }
+      var ox = i4 * C + (C - 6 * u) / 2 + rowShift[j4], oy = j4 * CH + (CH - 8 * u) / 2;
+      var lvl = -1;
+      for (var q4 = TH.length - 1; q4 >= 0; q4--) if (lum >= TH[q4]) { lvl = q4; break; }
+      if (lvl < 0) {
+        // halo: faint dots that run in vertical columns well past the figure
+        if (stage >= 4 && c.halo > 0) {
+          var hv = H[k4] * colGain[i4] * c.halo * 4;
+          if (hv > 0.05 + 0.1 * hash(i4, j4, 72)) {
+            var hc = rgb(tAt(i4, j4, 0.2));
+            stamp(LV[0][0], ox, oy, hc, Math.min(0.9, 0.25 + hv * 1.5));
+          }
+        }
+        continue;
+      }
+      var variants = LV[lvl], glyph = variants[Math.floor(hash(i4, j4, 73) * variants.length)];
+      var col4 = stage === 2 ? white : rgb(tAt(i4, j4, d4));
+      var a4 = Math.min(1, 0.35 + 0.75 * lum);
+      stamp(glyph, ox, oy, col4, a4);
+    }
+    gctx.putImageData(img, 0, 0);
+    ctx.globalCompositeOperation = 'lighter';
+    // bloom: each glyph bleeds a little light around itself
+    if (stage >= 5 && c.glow > 0) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.globalAlpha = Math.min(1, c.glow * 1.6);
+      if (typeof ctx.filter === 'string') {
+        ctx.filter = 'blur(' + (2 * dpr).toFixed(1) + 'px)';
+        ctx.drawImage(gl, 0, 0, W, WH);
+        ctx.filter = 'none';
+      } else {
+        var hc2 = document.createElement('canvas'); hc2.width = Math.ceil(SW / 3); hc2.height = Math.ceil(SH / 3);
+        hc2.getContext('2d').drawImage(gl, 0, 0, hc2.width, hc2.height);
+        ctx.drawImage(hc2, 0, 0, W, WH);
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(gl, 0, 0, W, WH);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+}
+</script>
+</body>
+</html>

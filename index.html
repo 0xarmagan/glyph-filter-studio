@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Glyph Filter Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter+Tight:wght@300;500;700&display=swap">
+<style>
+/* Layout: one-screen tool. Control rail on the left, the rendered image fills the stage on the right; stacks on phones. Single dark look (EEZ). */
+:root {
+  --void: #000000;
+  --canvas: #0a0a0a;
+  --screen: #161616;
+  --chrome: #1f1f1f;
+  --edge: #2e2e2e;
+  --control: #141414;
+  --ink: #ffffff;
+  --ink-body: #c9cfda;
+  --muted: #9aa3b3;
+  --live: #3be57e;
+  --mint: #8ae5ac;
+  --steel: #6283bd;
+  --grid: rgba(255,255,255,0.045);
+  --sans: "Suisse Intl", "Inter Tight", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+.app {
+  height: 100%;
+  display: flex;
+  min-height: 0;
+}
+.rail {
+  width: 340px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--edge);
+  background: var(--canvas);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding-block: 24px 32px;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: 20px;
+}
+.stage {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  padding-right: max(28px, env(safe-area-inset-right, 0px));
+  background-color: var(--canvas);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+.stage.drag { outline: 2px dashed var(--live); outline-offset: -14px; }
+.frame {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+}
+.frame canvas {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 56px);
+  object-fit: contain;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background:
+    repeating-conic-gradient(#151515 0% 25%, #0e0e0e 0% 50%) 50% / 20px 20px;
+}
+.frame canvas.solid { background: var(--void); }
+.eyebrow, .label, .val, .pill, .btn, .hint, .status {
+  font-family: var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.eyebrow { margin: 0; font-size: 12.5px; color: var(--muted); }
+h1 {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.08;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+h1 span { font-weight: 300; color: #d8d8d8; }
+.lede { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ink-body); }
+.group { display: flex; flex-direction: column; gap: 10px; }
+.group-head { display: flex; justify-content: space-between; align-items: baseline; }
+.label { font-size: 11.5px; color: var(--muted); }
+.val { font-size: 11.5px; color: var(--ink); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 100px;
+  border: 1px solid var(--edge);
+  background: var(--control);
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.pill:hover { color: var(--ink); }
+.pill[aria-pressed="true"] { border-color: var(--live); color: var(--ink); background: #1a1a1a; }
+.slider { display: flex; flex-direction: column; gap: 4px; }
+.slider .row { display: flex; justify-content: space-between; align-items: baseline; }
+input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--live); }
+input[type="color"] { width: 44px; height: 32px; padding: 0; border: 1px solid var(--edge); border-radius: 8px; background: var(--control); }
+.btn {
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 100px;
+  border: 1px solid var(--edge);
+  background: var(--control);
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn:hover { border-color: #444; }
+.btn.primary {
+  border-color: transparent;
+  background: linear-gradient(90deg, var(--mint), var(--steel));
+  color: var(--canvas);
+}
+.btn.primary:hover { background: linear-gradient(90deg, #9debbb, #7593cd); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn-row .btn { flex: 1 1 120px; }
+.upload {
+  border: 1px dashed var(--edge);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--screen);
+}
+.hint { margin: 0; font-size: 10.5px; color: var(--muted); letter-spacing: 0.04em; line-height: 1.5; text-transform: none; }
+.status { position: absolute; left: 28px; bottom: 22px; font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+.compare { position: absolute; right: max(28px, env(safe-area-inset-right, 0px)); top: 22px; }
+:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+details summary { cursor: pointer; list-style: none; }
+details summary::-webkit-details-marker { display: none; }
+details summary .label::after { content: " +"; }
+details[open] summary .label::after { content: " −"; }
+details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+@media (max-width: 820px) {
+  .app { flex-direction: column; height: auto; }
+  .rail { width: auto; border-right: 0; border-bottom: 1px solid var(--edge); overflow: visible; order: 2; padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); }
+  .stage { order: 1; min-height: 60vh; padding: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .frame canvas { max-height: 70vh; }
+  .status { left: 16px; bottom: 10px; }
+  .compare { top: 10px; right: max(16px, env(safe-area-inset-right, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail" aria-label="Filter controls">
+    <div class="group">
+      <p class="eyebrow">[ GLYPH MATRIX ]</p>
+      <h1>Glyph filter <span>studio</span></h1>
+      <p class="lede">Drop in any image. Each cell becomes a tiny pixel glyph picked by brightness, then lit, warped and bloomed.</p>
+    </div>
+
+    <div class="upload">
+      <div class="btn-row">
+        <label class="btn primary" for="file">UPLOAD IMAGE</label>
+        <input class="sr" type="file" id="file" accept="image/*">
+      </div>
+      <p class="hint">Or drag an image onto the stage, or paste one. Your image stays in this browser.</p>
+    </div>
+
+    <div class="group">
+      <div class="group-head"><span class="label" id="src-label">Source</span><span class="val" id="src-name">Diamond</span></div>
+      <div class="pills" role="group" aria-labelledby="src-label" id="sources"></div>
+    </div>
+
+    <div class="group">
+      <div class="group-head"><span class="label" id="pass-label">Build-up</span><span class="val" id="pass-name">05 Bloom</span></div>
+      <div class="pills" role="group" aria-labelledby="pass-label" id="passes"></div>
+    </div>
+
+    <div class="group">
+      <span class="label" id="pal-label">Colour</span>
+      <div class="pills" role="group" aria-labelledby="pal-label" id="palettes"></div>
+    </div>
+
+    <div class="group" id="sliders-main"></div>
+
+    <details class="group" id="adv">
+      <summary><span class="label">Image levels and light</span></summary>
+      <div class="inner" id="sliders-adv"></div>
+    </details>
+
+    <div class="group">
+      <span class="label" id="bg-label">Background</span>
+      <div class="pills" role="group" aria-labelledby="bg-label" id="bgs"></div>
+      <div class="pills" style="align-items:center">
+        <input type="color" id="bgcolor" value="#0c0b1e" aria-label="Custom background colour">
+        <label class="pill" style="display:inline-flex;align-items:center;gap:8px"><input type="checkbox" id="invert"> INVERT IMAGE</label>
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="label" id="exp-label">Export PNG</span>
+      <div class="pills" role="group" aria-labelledby="exp-label" id="scales"></div>
+      <div class="btn-row">
+        <button class="btn primary" type="button" id="save">SAVE PNG →</button>
+        <button class="btn" type="button" id="reseed">RESEED</button>
+      </div>
+      <p class="hint" id="save-note">The export is drawn again at the chosen scale, so glyphs stay crisp.</p>
+    </div>
+  </aside>
+
+  <main class="stage" id="stage">
+    <button class="pill compare" type="button" id="compare" aria-pressed="false">SHOW ORIGINAL</button>
+    <div class="frame"><canvas id="out" class="solid" role="img" aria-label="Filtered image"></canvas></div>
+    <p class="status" id="status">Ready</p>
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------------- state ----------------
+  var S = {
+    source: 'diamond', image: null, imageName: '',
+    pass: 5, palette: 'electric', bg: 'black', bgColor: '#0c0b1e', invert: false,
+    size: 1000, cell: 9, weight: 1, warp: 0.5, halo: 0.6, glow: 0.5, light: 225,
+    lightAmt: 0.6, black: 0.05, white: 0.95, gamma: 1, gain: 1, edges: 0.3,
+    seed: 7, scale: 2, compare: false
+  };
+  try { var saved = JSON.parse(localStorage.getItem('glyph-studio') || 'null'); if (saved) Object.keys(saved).forEach(function (k) { if (k in S && k !== 'image' && k !== 'compare' && k !== 'source' && k !== 'imageName') S[k] = saved[k]; }); } catch (e) {}
+  function persist() {
+    try { var o = {}; Object.keys(S).forEach(function (k) { if (k !== 'image' && k !== 'compare') o[k] = S[k]; }); localStorage.setItem('glyph-studio', JSON.stringify(o)); } catch (e) {}
+  }
+
+  var SHAPES = ['diamond', 'cube', 'circle', 'triangle', 'hexagon', 'square', 'lines', 'line', 'vbar', 'hbar'];
+  var PASSES = ['01 Source', '02 Glyphs', '03 Light', '04 Warp', '05 Bloom'];
+  var PAL = {
+    electric: [[0, '#1626d8'], [0.3, '#1d5bff'], [0.55, '#2a9dff'], [0.78, '#3ff0d8'], [1, '#66ff7a']],
+    brand: [[0, '#4439cb'], [0.45, '#6283bd'], [0.78, '#8ae5ac'], [1, '#3be57e']],
+    mono: [[0, '#5a5a5a'], [1, '#ffffff']],
+    ember: [[0, '#5a1020'], [0.4, '#c2321e'], [0.75, '#ff9a3c'], [1, '#ffe7a8']],
+    source: null
+  };
+  var MAIN = [
+    ['size', 'Size', 400, 2000, 50, 'px'],
+    ['cell', 'Cell', 5, 24, 1, 'px'],
+    ['gain', 'Density', 0.4, 2.5, 0.05, '×'],
+    ['warp', 'Warp', 0, 1, 0.05, ''],
+    ['halo', 'Dot columns', 0, 1, 0.05, ''],
+    ['glow', 'Glow', 0, 1, 0.05, '']
+  ];
+  var ADV = [
+    ['black', 'Black point', 0, 0.9, 0.01, ''],
+    ['white', 'White point', 0.1, 1, 0.01, ''],
+    ['gamma', 'Gamma', 0.3, 3, 0.05, ''],
+    ['edges', 'Edge boost', 0, 1, 0.05, ''],
+    ['lightAmt', 'Light amount', 0, 1, 0.05, ''],
+    ['light', 'Light angle', 0, 360, 5, '°'],
+    ['weight', 'Shape stroke', 0.4, 2, 0.05, '×']
+  ];
+
+  // ---------------- controls ----------------
+  var $ = function (id) { return document.getElementById(id); };
+  function pills(el, items, key, labelFn) {
+    el.innerHTML = '';
+    items.forEach(function (v) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'pill';
+      b.textContent = labelFn ? labelFn(v) : String(v).toUpperCase();
+      b.setAttribute('aria-pressed', String(S[key] === v));
+      b.addEventListener('click', function () { S[key] = v; syncPills(); schedule(); });
+      b.dataset.v = String(v); b.dataset.k = key;
+      el.appendChild(b);
+    });
+  }
+  function syncPills() {
+    document.querySelectorAll('.pill[data-k]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(String(S[b.dataset.k]) === b.dataset.v));
+    });
+    $('src-name').textContent = S.source === 'image' ? (S.imageName || 'Your image') : cap(S.source);
+    $('pass-name').textContent = PASSES[S.pass - 1];
+    $('out').classList.toggle('solid', S.bg !== 'clear');
+  }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function sliders(el, defs) {
+    defs.forEach(function (d) {
+      var wrap = document.createElement('div'); wrap.className = 'slider';
+      var id = 'sl-' + d[0];
+      wrap.innerHTML = '<div class="row"><label class="label" for="' + id + '"></label><span class="val"></span></div><input type="range">';
+      wrap.querySelector('label').textContent = d[1];
+      var inp = wrap.querySelector('input'), val = wrap.querySelector('.val');
+      inp.id = id; inp.min = d[2]; inp.max = d[3]; inp.step = d[4]; inp.value = S[d[0]];
+      var show = function () { var v = S[d[0]]; val.textContent = (d[4] < 1 ? Number(v).toFixed(2) : String(v)) + d[5]; };
+      show();
+      inp.addEventListener('input', function () { S[d[0]] = Number(inp.value); show(); schedule(); });
+      el.appendChild(wrap);
+    });
+  }
+
+  function buildSources() {
+    var list = (S.image ? ['image'] : []).concat(SHAPES);
+    pills($('sources'), list, 'source', function (v) { return v === 'image' ? 'YOUR IMAGE' : v.toUpperCase(); });
+  }
+  buildSources();
+  pills($('passes'), [1, 2, 3, 4, 5], 'pass', function (v) { return '0' + v; });
+  pills($('palettes'), ['electric', 'brand', 'ember', 'mono', 'source'], 'palette', function (v) { return v === 'source' ? 'IMAGE COLOURS' : v.toUpperCase(); });
+  pills($('bgs'), ['black', 'custom', 'clear'], 'bg', function (v) { return v === 'clear' ? 'TRANSPARENT' : v.toUpperCase(); });
+  pills($('scales'), [1, 2, 3], 'scale', function (v) { return v + '×'; });
+  sliders($('sliders-main'), MAIN);
+  sliders($('sliders-adv'), ADV);
+  $('bgcolor').value = S.bgColor;
+  $('invert').checked = S.invert;
+  $('bgcolor').addEventListener('input', function (e) { S.bgColor = e.target.value; S.bg = 'custom'; syncPills(); schedule(); });
+  $('invert').addEventListener('change', function (e) { S.invert = e.target.checked; schedule(); });
+  $('reseed').addEventListener('click', function () { S.seed = 1 + Math.floor(Math.random() * 9000); schedule(); });
+  $('compare').addEventListener('click', function () {
+    S.compare = !S.compare; this.setAttribute('aria-pressed', String(S.compare));
+    this.textContent = S.compare ? 'SHOW FILTERED' : 'SHOW ORIGINAL'; schedule();
+  });
+
+  // ---------------- image input ----------------
+  function loadFile(file) {
+    if (!file || !/^image\//.test(file.type)) { status('That file is not an image. Try a PNG, JPG, WebP or GIF.'); return; }
+    var url = URL.createObjectURL(file), img = new Image();
+    img.onload = function () {
+      S.image = img; S.imageName = file.name.replace(/\.[^.]+$/, '').slice(0, 28) || 'Your image';
+      S.source = 'image'; buildSources(); syncPills(); schedule();
+    };
+    img.onerror = function () { status('Could not read that image. Try another file.'); };
+    img.src = url;
+  }
+  $('file').addEventListener('change', function (e) { loadFile(e.target.files && e.target.files[0]); e.target.value = ''; });
+  var stage = $('stage');
+  ['dragenter', 'dragover'].forEach(function (t) { stage.addEventListener(t, function (e) { e.preventDefault(); stage.classList.add('drag'); }); });
+  ['dragleave', 'drop'].forEach(function (t) { stage.addEventListener(t, function (e) { e.preventDefault(); stage.classList.remove('drag'); }); });
+  stage.addEventListener('drop', function (e) { var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) loadFile(f); });
+  document.addEventListener('paste', function (e) {
+    var items = (e.clipboardData && e.clipboardData.items) || [];
+    for (var i = 0; i < items.length; i++) if (items[i].type.indexOf('image/') === 0) { loadFile(items[i].getAsFile()); break; }
+  });
+
+  function status(t) { $('status').textContent = t; }
+
+  // ---------------- source raster ----------------
+  function paintShape(g, shape, SW, SH, k, m, alpha, FILL) {
+    var Sm = Math.min(SW, SH), cx = SW / 2, cy = SH / 2, R = Sm * 0.3, w = Sm * 0.042 * k * m, PI = Math.PI;
+    g.strokeStyle = 'rgba(255,255,255,' + alpha + ')'; g.fillStyle = '#fff';
+    g.lineWidth = w; g.lineJoin = 'miter'; g.miterLimit = 6; g.lineCap = 'square';
+    var poly = function (pts, fill) {
+      g.beginPath();
+      for (var i = 0; i < pts.length; i++) { if (i) g.lineTo(pts[i][0], pts[i][1]); else g.moveTo(pts[i][0], pts[i][1]); }
+      g.closePath();
+      if (fill) { g.globalAlpha = fill; g.fill(); g.globalAlpha = 1; }
+      g.stroke();
+    };
+    var seg = function (a, b, lw) { g.save(); if (lw) g.lineWidth = lw; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.restore(); };
+    var reg = function (n, r, rot, oy) { var out = []; for (var i = 0; i < n; i++) { var t = rot + i * 2 * PI / n; out.push([cx + r * Math.cos(t), cy + (oy || 0) + r * Math.sin(t)]); } return out; };
+    if (shape === 'vbar' || shape === 'hbar') {
+      var v = shape === 'vbar', bw = Sm * 0.05 * k * m, inset = (v ? SH : SW) * 0.08;
+      g.lineCap = 'butt';
+      seg(v ? [cx, inset] : [inset, cy], v ? [cx, SH - inset] : [SW - inset, cy], bw);
+    } else if (shape === 'line') {
+      seg([cx - R * 0.5, cy + R * 1.2], [cx + R * 0.5, cy - R * 1.2], w * 1.4);
+    } else if (shape === 'lines') {
+      for (var i = -1; i <= 1; i++) { var dx = i * R * 0.66; seg([cx + dx - R * 0.35, cy + R * 1.15], [cx + dx + R * 0.35, cy - R * 1.15], w); }
+    } else if (shape === 'triangle') {
+      poly(reg(3, R * 1.2, -PI / 2, R * 0.2), FILL);
+    } else if (shape === 'square') {
+      poly(reg(4, R * 1.15, PI / 4, 0), FILL);
+    } else if (shape === 'circle') {
+      g.beginPath(); g.arc(cx, cy, R, 0, 2 * PI); g.globalAlpha = FILL; g.fill(); g.globalAlpha = 1; g.stroke();
+    } else if (shape === 'hexagon') {
+      poly(reg(6, R * 1.1, -PI / 2, 0), FILL);
+    } else if (shape === 'cube') {
+      var h = reg(6, R * 1.12, -PI / 2, 0); poly(h, FILL);
+      seg([cx, cy], h[1]); seg([cx, cy], h[3]); seg([cx, cy], h[5]);
+    } else {
+      var hY = R * 1.38, hX = R * 0.84;
+      poly([[cx, cy - hY], [cx + hX, cy], [cx, cy + hY], [cx - hX, cy]], FILL);
+      var s = 0.42;
+      poly([[cx, cy - hY * s], [cx + hX * s, cy], [cx, cy + hY * s], [cx - hX * s, cy]], 0);
+      seg([cx, cy - hY], [cx, cy + hY], w * 0.4);
+    }
+  }
+
+  // Output dimensions for the current source at a given longest side.
+  function dims(longSide) {
+    if (S.source === 'image' && S.image) {
+      var iw = S.image.naturalWidth, ih = S.image.naturalHeight, r = longSide / Math.max(iw, ih);
+      return [Math.max(40, Math.round(iw * r)), Math.max(40, Math.round(ih * r))];
+    }
+    if (S.source === 'vbar') return [Math.round(longSide * 0.3), longSide];
+    if (S.source === 'hbar') return [longSide, Math.round(longSide * 0.15)];
+    return [longSide, longSide];
+  }
+
+  // Returns a canvas holding the source. Shapes: white on transparent. Image: drawn as is.
+  function sourceCanvas(SW, SH) {
+    var o = document.createElement('canvas'); o.width = SW; o.height = SH;
+    var g = o.getContext('2d');
+    if (S.source === 'image' && S.image) {
+      g.drawImage(S.image, 0, 0, SW, SH);
+    } else {
+      paintShape(g, S.source, SW, SH, S.weight, 3, 0.1, 0.05);
+      paintShape(g, S.source, SW, SH, S.weight, 1.3, 0.2, 0);
+      paintShape(g, S.source, SW, SH, S.weight, 0.5, 1, 0);
+    }
+    return o;
+  }
+
+  // ---------------- the filter ----------------
+  // scale multiplies output size and cell together, so an export matches the preview.
+  function render(cv, scale, dpr) {
+    var base = dims(S.size), SW = Math.round(base[0] * scale), SH = Math.round(base[1] * scale);
+    var C = Math.max(3, Math.round(S.cell * scale)), CH = Math.round(C * 10 / 9), u = C / 9;
+    var stageN = S.pass, seed = S.seed, isImg = S.source === 'image' && !!S.image;
+    var W = Math.round(SW * dpr), WH = Math.round(SH * dpr);
+    if (cv.width !== W || cv.height !== WH) { cv.width = W; cv.height = WH; }
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.filter = 'none';
+    ctx.clearRect(0, 0, W, WH);
+    if (S.bg !== 'clear') { ctx.fillStyle = S.bg === 'custom' ? S.bgColor : '#000'; ctx.fillRect(0, 0, W, WH); }
+
+    var src = sourceCanvas(SW, SH);
+    if (S.compare) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(src, 0, 0, W, WH);
+      return { w: SW, h: SH };
+    }
+    var px = src.getContext('2d').getImageData(0, 0, SW, SH).data;
+    var cols = Math.ceil(SW / C), rows = Math.ceil(SH / CH), N = cols * rows;
+    var D = new Float32Array(N), CR = new Float32Array(N), CG = new Float32Array(N), CB = new Float32Array(N);
+    var st = Math.max(1, Math.floor(C / 4));
+    var lo = S.black, hi = Math.max(S.black + 0.02, S.white);
+    for (var j = 0; j < rows; j++) for (var i = 0; i < cols; i++) {
+      var sum = 0, n = 0, sr = 0, sg = 0, sb = 0, y1 = Math.min(SH, (j + 1) * CH), x1 = Math.min(SW, (i + 1) * C);
+      for (var yy = j * CH; yy < y1; yy += st) for (var xx = i * C; xx < x1; xx += st) {
+        var q = (yy * SW + xx) * 4, a = px[q + 3] / 255, v;
+        if (isImg) {
+          v = (0.2126 * px[q] + 0.7152 * px[q + 1] + 0.0722 * px[q + 2]) / 255;
+          if (S.invert) v = 1 - v;
+          v *= a;
+          sr += px[q] * a; sg += px[q + 1] * a; sb += px[q + 2] * a;
+        } else v = a;
+        sum += v; n++;
+      }
+      var k0 = j * cols + i, d0 = n ? sum / n : 0;
+      if (isImg) {
+        d0 = Math.max(0, Math.min(1, (d0 - lo) / (hi - lo)));
+        d0 = Math.pow(d0, S.gamma);
+        CR[k0] = n ? sr / n : 0; CG[k0] = n ? sg / n : 0; CB[k0] = n ? sb / n : 0;
+      }
+      D[k0] = d0;
+    }
+    var blur = function (srcA, rx, ry, passes) {
+      var a = srcA;
+      for (var p = 0; p < passes; p++) {
+        var t = new Float32Array(N), b = new Float32Array(N);
+        for (var j = 0; j < rows; j++) for (var i = 0; i < cols; i++) {
+          var s = 0, n = 0;
+          for (var d = -rx; d <= rx; d++) { var ii = i + d; if (ii >= 0 && ii < cols) { s += a[j * cols + ii]; n++; } }
+          t[j * cols + i] = s / n;
+        }
+        for (var j2 = 0; j2 < rows; j2++) for (var i2 = 0; i2 < cols; i2++) {
+          var s2 = 0, n2 = 0;
+          for (var d2 = -ry; d2 <= ry; d2++) { var jj = j2 + d2; if (jj >= 0 && jj < rows) { s2 += t[jj * cols + i2]; n2++; } }
+          b[j2 * cols + i2] = s2 / n2;
+        }
+        a = b;
+      }
+      return a;
+    };
+    var H = blur(D, 3, 6, 3);
+
+    var hash = function (a, b, ch) {
+      var h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) + Math.imul(ch | 0, 1442695041) + Math.imul(seed | 0, -2048144777)) | 0;
+      h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16;
+      return (h >>> 0) / 4294967296;
+    };
+    var vnoise = function (x, y, ch) {
+      var xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+      var uu = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+      var a = hash(xi, yi, ch), b = hash(xi + 1, yi, ch), cc = hash(xi, yi + 1, ch), d = hash(xi + 1, yi + 1, ch);
+      return a + (b - a) * uu + (cc - a) * v + (a - b - cc + d) * uu * v;
+    };
+    var samp = function (arr, x, y) {
+      x = Math.max(0, Math.min(cols - 1.001, x)); y = Math.max(0, Math.min(rows - 1.001, y));
+      var xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, k = yi * cols + xi;
+      if (cols < 2 || rows < 2) return arr[k] || 0;
+      return (arr[k] * (1 - fx) + arr[k + 1] * fx) * (1 - fy) + (arr[k + cols] * (1 - fx) + arr[k + cols + 1] * fx) * fy;
+    };
+
+    var F = new Float32Array(N), warp = stageN >= 4 ? S.warp : 0, wcell = function (i, j) { return Math.round(i) + Math.round(j) * cols; };
+    var srcIdx = new Int32Array(N);
+    for (var j3 = 0; j3 < rows; j3++) for (var i3 = 0; i3 < cols; i3++) {
+      var wx = (vnoise(i3 / 4, j3 / 4, 41) - 0.5) * 2 + (vnoise(i3 / 1.5, j3 / 1.5, 43) - 0.5) * 0.8;
+      var wy = (vnoise(i3 / 4, j3 / 4, 42) - 0.5) * 2 + (vnoise(i3 / 1.5, j3 / 1.5, 44) - 0.5) * 0.8;
+      var sx = i3 + wx * warp * 1.1, sy = j3 + wy * warp * 1.1;
+      F[j3 * cols + i3] = Math.min(1, samp(D, sx, sy) * 1.1);
+      srcIdx[j3 * cols + i3] = Math.max(0, Math.min(N - 1, wcell(Math.max(0, Math.min(cols - 1, sx)), Math.max(0, Math.min(rows - 1, sy)))));
+    }
+    var E = new Float32Array(N);
+    for (var j5 = 1; j5 < rows - 1; j5++) for (var i5 = 1; i5 < cols - 1; i5++) {
+      var k5 = j5 * cols + i5, gx = F[k5 + 1] - F[k5 - 1], gy = F[k5 + cols] - F[k5 - cols];
+      E[k5] = Math.min(1, Math.sqrt(gx * gx + gy * gy) * 1.1);
+    }
+
+    var useSrc = S.palette === 'source' && isImg;
+    var stops = (PAL[S.palette] || PAL.electric).map(function (s) {
+      var hx = s[1]; return [s[0], parseInt(hx.slice(1, 3), 16), parseInt(hx.slice(3, 5), 16), parseInt(hx.slice(5, 7), 16)];
+    });
+    var ramp = function (t) {
+      t = Math.max(0, Math.min(1, t));
+      for (var q = 1; q < stops.length; q++) {
+        if (t <= stops[q][0] || q === stops.length - 1) {
+          var s0 = stops[q - 1], s1 = stops[q], f = Math.max(0, Math.min(1, (t - s0[0]) / Math.max(1e-6, s1[0] - s0[0])));
+          return [s0[1] + (s1[1] - s0[1]) * f, s0[2] + (s1[2] - s0[2]) * f, s0[3] + (s1[3] - s0[3]) * f];
+        }
+      }
+    };
+    var ang = S.light * Math.PI / 180, lx = Math.cos(ang), ly = Math.sin(ang), la = S.lightAmt;
+    var isBar = !isImg && (S.source === 'vbar' || S.source === 'hbar');
+    var R = isBar ? Math.max(SW, SH) * 0.5 : Math.min(SW, SH) * 0.36;
+    var lightAt = function (i, j) {
+      var nx = ((i + 0.5) * C - SW / 2) / R, ny = ((j + 0.5) * CH - SH / 2) / R;
+      return (Math.max(-1, Math.min(1, nx * lx + ny * ly)) + 1) / 2;
+    };
+    var colorAt = function (i, j, d) {
+      if (stageN < 3) return [255, 255, 255];
+      var k = j * cols + i;
+      if (useSrc) {
+        var si = srcIdx[k], r = CR[si], g = CG[si], b = CB[si], mx = Math.max(r, g, b, 1), boost = 255 / mx;
+        var mixB = 0.55 + 0.45 * Math.min(1, d * 1.5);
+        return [r * boost * mixB, g * boost * mixB, b * boost * mixB];
+      }
+      var lit = d * 0.3 + Math.pow(lightAt(i, j), 1.5) * 1.1 - 0.12;
+      var t = d * 0.85 * (1 - la) + la * lit + E[k] * 0.12 + (hash(i, j, 50) - 0.5) * 0.12;
+      return ramp(t);
+    };
+    var curve = isImg ? function (d) { return d * 1.05; } : function (d) { return Math.min(1.2, Math.pow(d, 1.4) * 1.5); };
+
+    // glow under
+    if (stageN === 1 || (stageN >= 5 && S.glow > 0)) {
+      var low = document.createElement('canvas'); low.width = cols; low.height = rows;
+      var lg = low.getContext('2d'), lid = lg.createImageData(cols, rows);
+      for (var k2 = 0; k2 < N; k2++) {
+        var ii2 = k2 % cols, jj2 = (k2 / cols) | 0, f2 = stageN === 1 ? D[k2] : F[k2];
+        var col2 = stageN === 1 ? [255, 255, 255] : colorAt(ii2, jj2, f2);
+        if (stageN !== 1 && !useSrc) col2 = col2.map(function (x) { return x * 0.85; });
+        lid.data[k2 * 4] = col2[0]; lid.data[k2 * 4 + 1] = col2[1]; lid.data[k2 * 4 + 2] = col2[2];
+        var lf = isImg ? 0.5 + 0.5 * la * lightAt(ii2, jj2) : 0.35 + lightAt(ii2, jj2);
+        lid.data[k2 * 4 + 3] = Math.round(255 * Math.min(1, stageN === 1 ? f2 : f2 * S.glow * 0.75 * lf));
+      }
+      lg.putImageData(lid, 0, 0);
+      ctx.imageSmoothingEnabled = stageN !== 1;
+      if (stageN !== 1 && typeof ctx.filter === 'string') ctx.filter = 'blur(' + Math.max(1, Math.round(C * dpr * 0.6)) + 'px)';
+      ctx.drawImage(low, 0, 0, cols * C * dpr, rows * CH * dpr);
+      ctx.filter = 'none';
+      if (stageN === 1) return { w: SW, h: SH };
+    }
+
+    var G = function (rowsTxt) { var pts = []; rowsTxt.forEach(function (r, y) { for (var x = 0; x < r.length; x++) if (r[x] === '#') pts.push([x, y]); }); return pts; };
+    var LV = [
+      [G(['......', '......', '......', '..##..', '..##..', '......', '......', '......'])],
+      [G(['......', '..##..', '..##..', '......', '......', '..##..', '..##..', '......']),
+       G(['......', '......', '..##..', '..##..', '..##..', '..##..', '......', '......']),
+       G(['......', '......', '.##.#.', '......', '......', '.#.##.', '......', '......'])],
+      [G(['......', '......', '.###..', '.#....', '.#..#.', '..###.', '......', '......']),
+       G(['......', '......', '.##.#.', '.#..#.', '.#....', '.####.', '......', '......']),
+       G(['......', '.##...', '.#....', '.#....', '.#....', '.##...', '......', '......']),
+       G(['......', '...##.', '....#.', '....#.', '....#.', '...##.', '......', '......'])],
+      [G(['......', '......', '.####.', '.#..#.', '.#..#.', '.####.', '......', '......']),
+       G(['......', '.####.', '#....#', '#....#', '#....#', '.####.', '......', '......']),
+       G(['......', '.###..', '#....#', '#....#', '#.....', '.####.', '......', '......'])],
+      [G(['.####.', '#....#', '#....#', '#....#', '#....#', '#....#', '.####.', '......']),
+       G(['######', '#....#', '#....#', '#....#', '#....#', '#.....', '###.##', '......'])],
+      [G(['######', '#....#', '#....#', '#....#', '#....#', '#....#', '######', '......']),
+       G(['######', '#....#', '#.##.#', '#.##.#', '#....#', '#....#', '######', '......'])],
+      [G(['######', '######', '##..##', '##..##', '##..##', '######', '######', '......']),
+       G(['######', '#....#', '#.##.#', '#.##.#', '#.##.#', '#....#', '######', '......'])]
+    ];
+    var TH = [0.035, 0.1, 0.21, 0.35, 0.5, 0.7, 0.92];
+
+    var gl = document.createElement('canvas'); gl.width = SW; gl.height = SH;
+    var gctx = gl.getContext('2d'), img = gctx.createImageData(SW, SH), buf = img.data;
+    var put = function (x, y, w, h, r, gg, b, a) {
+      var x0 = Math.max(0, Math.round(x)), y0 = Math.max(0, Math.round(y));
+      var x1 = Math.min(SW, Math.round(x + w)), y1 = Math.min(SH, Math.round(y + h));
+      for (var yy = y0; yy < y1; yy++) for (var xx = x0; xx < x1; xx++) {
+        var q = (yy * SW + xx) * 4;
+        buf[q] = Math.min(255, buf[q] + r * a); buf[q + 1] = Math.min(255, buf[q + 1] + gg * a); buf[q + 2] = Math.min(255, buf[q + 2] + b * a);
+        buf[q + 3] = 255;
+      }
+    };
+    var pu = Math.max(1, u), drop = stageN >= 4 ? S.warp * 0.3 : 0, cellId = 0;
+    var stamp = function (glyph, ox, oy, col, a) {
+      cellId++;
+      for (var p = 0; p < glyph.length; p++) {
+        var hp = hash(cellId, p, 80);
+        if (hp < drop) continue;
+        var dx = drop && hp > 0.97 ? u : 0;
+        put(ox + glyph[p][0] * u + dx, oy + glyph[p][1] * u, pu, pu, col[0], col[1], col[2], a * (0.7 + 0.3 * hash(cellId, p, 81)));
+      }
+    };
+    var rowShift = new Float32Array(rows);
+    if (stageN >= 5) for (var r2 = 0; r2 < rows; r2++) rowShift[r2] = hash(r2, 3, 61) < 0.07 * S.warp ? Math.round((hash(r2, 4, 62) - 0.5) * 6) * u : 0;
+    var colGain = new Float32Array(cols);
+    for (var c2 = 0; c2 < cols; c2++) colGain[c2] = hash(c2, 1, 63) < 0.15 ? 0.2 * hash(c2, 2, 64) : 0.5 + 0.8 * hash(c2, 2, 64);
+
+    for (var j4 = 0; j4 < rows; j4++) for (var i4 = 0; i4 < cols; i4++) {
+      var k4 = j4 * cols + i4, d4 = F[k4];
+      var lightF = stageN >= 3 ? (1 - la) + la * (0.65 + 0.7 * lightAt(i4, j4)) : 1;
+      var lum = curve(d4) * S.gain * lightF + (stageN >= 3 ? E[k4] * S.edges * (isImg ? 0.6 : 0.33) : 0);
+      if (stageN >= 4) {
+        lum += (hash(i4, j4, 70) - 0.5) * 0.14;
+        if (d4 > 0.25 && vnoise(i4 / 2.6, j4 / 2.6, 71) > 1 - S.warp * 0.3) lum *= 0.25;
+      }
+      var ox = i4 * C + (C - 6 * u) / 2 + rowShift[j4], oy = j4 * CH + (CH - 8 * u) / 2;
+      var lvl = -1;
+      for (var q4 = TH.length - 1; q4 >= 0; q4--) if (lum >= TH[q4]) { lvl = q4; break; }
+      if (lvl < 0) {
+        if (stageN >= 4 && S.halo > 0) {
+          var hv = H[k4] * colGain[i4] * S.halo * 4;
+          if (hv > 0.05 + 0.1 * hash(i4, j4, 72)) stamp(LV[0][0], ox, oy, colorAt(i4, j4, 0.2), Math.min(0.9, 0.25 + hv * 1.5));
+        }
+        continue;
+      }
+      var variants = LV[lvl], glyph = variants[Math.floor(hash(i4, j4, 73) * variants.length)];
+      stamp(glyph, ox, oy, colorAt(i4, j4, d4), Math.min(1, 0.35 + 0.75 * lum));
+    }
+    gctx.putImageData(img, 0, 0);
+    ctx.globalCompositeOperation = 'lighter';
+    if (stageN >= 5 && S.glow > 0) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.globalAlpha = Math.min(1, S.glow * 1.6);
+      if (typeof ctx.filter === 'string') {
+        ctx.filter = 'blur(' + (2 * dpr * scale).toFixed(1) + 'px)';
+        ctx.drawImage(gl, 0, 0, W, WH);
+        ctx.filter = 'none';
+      } else {
+        var hc = document.createElement('canvas'); hc.width = Math.ceil(SW / 3); hc.height = Math.ceil(SH / 3);
+        hc.getContext('2d').drawImage(gl, 0, 0, hc.width, hc.height);
+        ctx.drawImage(hc, 0, 0, W, WH);
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(gl, 0, 0, W, WH);
+    ctx.globalCompositeOperation = 'source-over';
+    return { w: SW, h: SH, cells: cols * rows };
+  }
+
+  // ---------------- draw loop ----------------
+  var out = $('out'), pending = false;
+  function schedule() {
+    if (pending) return; pending = true;
+    requestAnimationFrame(function () {
+      pending = false;
+      var t0 = performance.now();
+      var dpr = Math.min(2, window.devicePixelRatio || 1);
+      var r = render(out, 1, dpr);
+      out.style.width = r.w + 'px';
+      out.style.aspectRatio = r.w + ' / ' + r.h;
+      status(r.w + ' × ' + r.h + ' px' + (r.cells ? ' · ' + r.cells.toLocaleString() + ' cells' : '') + ' · ' + Math.round(performance.now() - t0) + ' ms');
+      persist();
+    });
+  }
+  syncPills();
+  schedule();
+
+  // ---------------- export ----------------
+  var downloadsP = (window.claude && window.claude.use) ? window.claude.use('downloads') : Promise.resolve(null);
+  $('save').addEventListener('click', function () {
+    var btn = this;
+    downloadsP.then(function (dl) {
+      if (!dl) { dl = { save: function (o) { return new Promise(function (res) { var a = document.createElement('a'); a.href = URL.createObjectURL(o.data); a.download = o.filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000); res({ status: 'saved' }); }); } }; }
+      btn.disabled = true; $('save-note').textContent = 'Rendering at ' + S.scale + '×…';
+      setTimeout(function () {
+        var ex = document.createElement('canvas');
+        var wasCompare = S.compare; S.compare = false;
+        render(ex, S.scale, 1);
+        S.compare = wasCompare;
+        ex.toBlob(function (blob) {
+          var name = (S.source === 'image' ? (S.imageName || 'image') : S.source) + '-glyph-' + S.scale + 'x.png';
+          dl.save({ filename: name, data: blob }).then(function () {
+            $('save-note').textContent = 'Saved ' + name + ' (' + ex.width + ' × ' + ex.height + ' px).';
+          }, function (err) {
+            var code = err && err.code;
+            $('save-note').textContent = code === 'declined' ? 'Save cancelled.' : code === 'rate_limited' ? 'A save prompt is already open.' : 'Could not save the PNG here.';
+          }).then(function () { btn.disabled = false; });
+        }, 'image/png');
+      }, 20);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

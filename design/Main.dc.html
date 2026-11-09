@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Signal field playground</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#ffffff}a:hover{color:#3be57e}
+</style>
+</helmet>
+<div style="width: 1360px; height: 900px; box-sizing: border-box; padding: 40px; display: flex; gap: 40px; background-color: #0a0a0a; background-image: linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px); background-size: 42px 42px; color: #ffffff; font-family: 'Suisse Intl', system-ui, -apple-system, 'Segoe UI', sans-serif">
+<div style="width: 420px; flex-shrink: 0; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<p style="margin: 0; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 12.5px; line-height: 1.4; letter-spacing: 0.1em; color: #9aa3b3">[ SIGNAL FIELD ]</p>
+<h1 style="margin: 0; font-size: 40px; line-height: 1.08; letter-spacing: -0.01em; font-weight: 700">Grid-glyph <span style="font-weight: 300; color: #d8d8d8">filter</span></h1>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: #c9cfda">Any line or figure, rebuilt as a matrix of tiny pixel glyphs, lit, warped and bloomed.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<p style="margin: 0; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; color: #9aa3b3">FIGURE</p>
+<div role="group" aria-label="Figure" style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{shapes}}" as="item" hint-placeholder-count="8">
+<button type="button" aria-pressed="{{item.on}}" onClick="{{item.pick}}" style="{{item.style}}">{{item.label}}</button>
+</sc-for>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<p style="margin: 0; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; color: #9aa3b3">BUILD-UP</p>
+<div role="group" aria-label="Build-up pass" style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{steps}}" as="item" hint-placeholder-count="5">
+<button type="button" aria-pressed="{{item.on}}" onClick="{{item.pick}}" style="{{item.style}}">{{item.label}}</button>
+</sc-for>
+</div>
+<p style="margin: 0; font-size: 13.5px; line-height: 1.55; color: #c9cfda"><span style="font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 11.5px; letter-spacing: 0.04em; color: #3be57e">{{stepTitle}}</span>  {{stepText}}</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px">
+<sc-for list="{{sliders}}" as="item" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<label for="{{item.id}}" style="font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; color: #9aa3b3">{{item.label}}</label>
+<span style="font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 12px; color: #ffffff">{{item.shown}}</span>
+</div>
+<input type="range" id="{{item.id}}" min="{{item.min}}" max="{{item.max}}" step="{{item.step}}" value="{{item.value}}" onChange="{{item.change}}" style="width: 100%; height: 24px; margin: 0; accent-color: #3be57e">
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<p style="margin: 0; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; color: #9aa3b3">PALETTE</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+<sc-for list="{{palettes}}" as="item" hint-placeholder-count="3">
+<button type="button" aria-pressed="{{item.on}}" onClick="{{item.pick}}" style="{{item.style}}">{{item.label}}</button>
+</sc-for>
+<button type="button" onClick="{{reseed}}" style="margin-left: auto; min-height: 34px; padding: 0 18px; border-radius: 100px; border: 1px solid transparent; background: linear-gradient(90deg, #8ae5ac, #6283bd); color: #0a0a0a; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 11.5px; font-weight: 500; letter-spacing: 0.02em; cursor: pointer">RESEED →</button>
+</div>
+</div>
+</div>
+<div style="width: 820px; height: 820px; box-sizing: border-box; border: 1px solid #2e2e2e; border-radius: 16px; overflow: hidden; background: #000000">
+<dc-import name="Figure" shape="{{shape}}" size="{{figSize}}" stage="{{stage}}" cell="{{cell}}" warp="{{warp}}" halo="{{halo}}" glow="{{glow}}" light="{{light}}" palette="{{palette}}" seed="{{seed}}" weight="{{weight}}" hint-size="818px,818px"></dc-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1360,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var self = this, s = this.state || {};
+    var get = function (k, d) { return s[k] !== undefined ? s[k] : d; };
+    var set = function (k, v) { var o = {}; o[k] = v; self.setState(o); };
+    var shape = get('shape', 'diamond'), stage = get('stage', 5), palette = get('palette', 'electric');
+    var base = "min-height: 34px; padding: 0 14px; border-radius: 100px; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 11.5px; font-weight: 500; letter-spacing: 0.02em; cursor: pointer; ";
+    var pill = function (on) { return base + (on ? 'border: 1px solid #3be57e; background: #1a1a1a; color: #ffffff' : 'border: 1px solid #2e2e2e; background: #141414; color: #9aa3b3'); };
+    var shapes = ['line', 'lines', 'triangle', 'square', 'circle', 'hexagon', 'diamond', 'cube', 'vbar', 'hbar'].map(function (x) {
+      return { label: x.toUpperCase(), on: x === shape, style: pill(x === shape), pick: function () { set('shape', x); } };
+    });
+    var STEPS = [
+      ['01 SOURCE', 'Draw the figure in three layers: a wide soft falloff, the band, a thin bright core. Average it per 9×10 cell.'],
+      ['02 GLYPHS', 'Swap each cell for a 6×8 pixel glyph picked by brightness: dot, colon, bracket, small box, box, box with core.'],
+      ['03 LIGHT', 'Gradient-map each glyph: brightness plus a light direction and a rim term, indigo to blue to cyan to green.'],
+      ['04 WARP', 'Domain-warp the field with noise, drop glyph pixels, and run faint dot columns through a tall halo.'],
+      ['05 BLOOM', 'Lay a blurred colour glow under the glyphs and a 2px bloom of the glyphs over them, added as light.']
+    ];
+    var steps = STEPS.map(function (st, i) {
+      var n = i + 1;
+      return { label: st[0].slice(0, 2), on: n === stage, style: pill(n === stage) + '; min-width: 48px', pick: function () { set('stage', n); } };
+    });
+    var defs = [
+      ['cell', 'CELL', 5, 18, 1, 9, ' px'],
+      ['weight', 'STROKE', 0.4, 2, 0.05, 1, '×'],
+      ['warp', 'WARP', 0, 1, 0.05, 0.5, ''],
+      ['halo', 'DOT COLUMNS', 0, 1, 0.05, 0.6, ''],
+      ['glow', 'GLOW', 0, 1, 0.05, 0.5, ''],
+      ['light', 'LIGHT ANGLE', 0, 360, 5, 225, '°']
+    ];
+    var vals = {};
+    var sliders = defs.map(function (d) {
+      var v = Number(get(d[0], d[5])); vals[d[0]] = v;
+      return {
+        id: 'sf-' + d[0], label: d[1], min: d[2], max: d[3], step: d[4], value: v,
+        shown: (d[4] < 1 ? v.toFixed(2) : String(v)) + d[6],
+        change: function (e) { set(d[0], Number(e.target.value)); }
+      };
+    });
+    var palettes = ['electric', 'brand', 'mono'].map(function (x) {
+      return { label: x.toUpperCase(), on: x === palette, style: pill(x === palette), pick: function () { set('palette', x); } };
+    });
+    return {
+      shapes: shapes, steps: steps, sliders: sliders, palettes: palettes,
+      stepTitle: STEPS[stage - 1][0], stepText: STEPS[stage - 1][1],
+      shape: shape, stage: stage, palette: palette, seed: get('seed', 7), figSize: 818,
+      cell: vals.cell, weight: vals.weight, warp: vals.warp, halo: vals.halo, glow: vals.glow, light: vals.light,
+      reseed: function () { set('seed', Math.floor(Math.random() * 9000) + 1); }
+    };
+  }
+}
+</script>
+</body>
+</html>

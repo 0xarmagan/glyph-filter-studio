@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Technique: five passes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1724px; height: 680px; box-sizing: border-box; padding: 56px 64px; display: flex; flex-direction: column; gap: 36px; background-color: #0a0a0a; background-image: linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px); background-size: 42px 42px; color: #ffffff; font-family: 'Suisse Intl', system-ui, -apple-system, 'Segoe UI', sans-serif">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<p style="margin: 0; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 12.5px; line-height: 1.4; letter-spacing: 0.1em; color: #9aa3b3">[ TECHNIQUE ]</p>
+<h1 style="margin: 0; font-size: 44px; line-height: 1.1; font-weight: 700">Five passes <span style="font-weight: 300; color: #d8d8d8">from shape to signal</span></h1>
+</div>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px">
+<sc-for list="{{passes}}" as="item" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="width: 300px; height: 300px; box-sizing: border-box; border: 1px solid #2e2e2e; border-radius: 16px; overflow: hidden; background: #000000">
+<dc-import name="Figure" shape="diamond" size="{{item.size}}" stage="{{item.stage}}" seed="{{item.seed}}" cell="{{item.cell}}" hint-size="298px,298px"></dc-import>
+</div>
+<p style="margin: 0; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; color: #3be57e">{{item.title}}</p>
+<p style="margin: 0; font-size: 13.5px; line-height: 1.55; color: #c9cfda; max-width: 300px">{{item.text}}</p>
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1724,"height":680}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var P = [
+      ['01 SOURCE', 'Draw the figure offscreen in three layers: a wide soft falloff, the band, and a thin bright core. Average its brightness per 9×10 cell.'],
+      ['02 GLYPHS', 'Replace every cell with a 6×8 pixel glyph chosen by brightness: dot, colon, bracket, small box, box, box with a core.'],
+      ['03 LIGHT', 'Gradient-map each glyph from brightness, a light direction and a rim term, so one side turns green and the far side stays blue.'],
+      ['04 WARP', 'Warp the field with noise so edges go ragged, drop random glyph pixels, and run faint dots in columns through a tall halo.'],
+      ['05 BLOOM', 'Lay a blurred colour glow under the glyphs and a 2px bloom of the glyphs over them, both added as light.']
+    ];
+    return {
+      passes: P.map(function (p, i) { return { title: p[0], text: p[1], stage: i + 1, size: 298, seed: 7, cell: 6 }; })
+    };
+  }
+}
+</script>
+</body>
+</html>
