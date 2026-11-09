@@ -16,9 +16,9 @@ Open `index.html` (or the Vercel deployment). It starts on the EEZ mark, rendere
 
 - **Source:** your image, the EEZ mark, or the built-in shapes (diamond, cube, circle, triangle, hexagon, square, lines, line, vertical bar, horizontal bar).
 - **Build-up:** passes 01–05.
-- **Palette:** EEZ, electric, brand, ember, mono, or the image's colours.
+- **Palette:** EEZ (green → cyan → blue → violet), deep, electric, brand, ember, mono, or the image's colours.
 - **Filter:** size, cell, density, warp, wobble, streaks, sparks, dot columns, glow.
-- **Levels and light:** black point, white point, gamma, edge boost, light amount, light angle.
+- **Levels and light:** black point, white point, gamma, edge boost, light amount, light angle, stroke weight, edge light, core depth.
 - **Ground:** light (glyphs painted as ink on paper) or dark (glyphs added as light).
 - **Background:** solid, a custom colour, or transparent.
 - **Export:** PNG at 1×, 2× or 3×. The export is drawn again at that scale, so the glyphs stay crisp.

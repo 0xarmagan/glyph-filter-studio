@@ -253,9 +253,9 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
   var S = {
     source: 'eez', image: null, imageName: '',
     pass: 5, palette: 'eez', ground: 'light', bg: 'solid', bgColor: '#0c0b1e', invert: false,
-    size: 1000, cell: 6, weight: 0.8, warp: 0.15, halo: 0, glow: 0.35, light: 225,
-    lightAmt: 0.8, black: 0.05, white: 0.95, gamma: 1, gain: 0.85, edges: 0.3,
-    streaks: 0.8, sparks: 0.5, wobble: 0.5,
+    size: 1000, cell: 8, weight: 0.6, warp: 0.15, halo: 0.6, glow: 0.9, light: 200,
+    lightAmt: 0.9, black: 0.05, white: 0.95, gamma: 1, gain: 0.95, edges: 0.3,
+    streaks: 0.6, sparks: 0.5, wobble: 0.4, depth: 0, edge: 0.15,
     seed: 7, scale: 2, compare: false
   };
   var STORE = 'glyph-studio-v2';
@@ -267,7 +267,8 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
   var SHAPES = ['eez', 'diamond', 'cube', 'circle', 'triangle', 'hexagon', 'square', 'lines', 'line', 'vbar', 'hbar'];
   var PASSES = ['01 Source', '02 Glyphs', '03 Light', '04 Warp', '05 Bloom'];
   var PAL = {
-    eez: [[0, '#0f2ef2'], [0.4, '#1440d0'], [0.56, '#17609e'], [0.72, '#14a06a'], [0.88, '#2fd85a'], [1, '#52f06a']],
+    eez: [[0, '#5a46f2'], [0.22, '#3a5cf4'], [0.42, '#2a86f4'], [0.6, '#1fc4f0'], [0.78, '#2ee6c0'], [1, '#46f06a']],
+    deep: [[0, '#0f2ef2'], [0.4, '#1440d0'], [0.56, '#17609e'], [0.72, '#14a06a'], [0.88, '#2fd85a'], [1, '#52f06a']],
     electric: [[0, '#1626d8'], [0.3, '#1d5bff'], [0.55, '#2a9dff'], [0.78, '#3ff0d8'], [1, '#66ff7a']],
     brand: [[0, '#4439cb'], [0.45, '#6283bd'], [0.78, '#8ae5ac'], [1, '#3be57e']],
     mono: [[0, '#5a5a5a'], [1, '#ffffff']],
@@ -292,7 +293,9 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
     ['edges', 'Edge boost', 0, 1, 0.05, ''],
     ['lightAmt', 'Light amount', 0, 1, 0.05, ''],
     ['light', 'Light angle', 0, 360, 5, '°'],
-    ['weight', 'Shape stroke', 0.4, 2, 0.05, '×']
+    ['weight', 'Shape stroke', 0.4, 2, 0.05, '×'],
+    ['edge', 'Edge light', 0, 1, 0.05, ''],
+    ['depth', 'Core depth', 0, 1, 0.05, '']
   ];
 
   // ---------------- controls ----------------
@@ -345,7 +348,7 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
   }
   buildSources();
   pills($('passes'), [1, 2, 3, 4, 5], 'pass', function (v) { return '0' + v; });
-  pills($('palettes'), ['eez', 'electric', 'brand', 'ember', 'mono', 'source'], 'palette', function (v) { return v === 'source' ? 'IMAGE COLOURS' : v.toUpperCase(); });
+  pills($('palettes'), ['eez', 'deep', 'electric', 'brand', 'ember', 'mono', 'source'], 'palette', function (v) { return v === 'source' ? 'IMAGE COLOURS' : v.toUpperCase(); });
   pills($('grounds'), ['light', 'dark'], 'ground', function (v) { return v.toUpperCase(); });
   pills($('bgs'), ['solid', 'custom', 'clear'], 'bg', function (v) { return v === 'clear' ? 'TRANSPARENT' : v.toUpperCase(); });
   pills($('scales'), [1, 2, 3], 'scale', function (v) { return v + '×'; });
@@ -428,7 +431,7 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
 
   // EEZ mark (eez-favicon-black.svg, 64×64 units). Bounds are measured once from a raster.
   var EEZ_D = 'M51.59 37.843v-.001h.002l.01-.004.006-.003.011-.004h.002l.009-.003h.002l.003-.002.006-.003.007-.002.004-.002h.001l.006-.003h.004l.004-.003h.007l.002-.003h.002l.012-.004.006-.003.011-.004h.002l.007-.003.003-.001.005-.002.008-.003h.003a.17.17 0 0 1 .008-.004l.006-.002c.003 0 .006-.002.009-.004h.002l.007-.004h.003l.002-.002h.004l.005-.002.003-.002h.001l.004-.001.01-.004.006-.002.02-.007a1.766 1.766 0 0 1 2.019.611l.042.06a1.643 1.643 0 0 1-.147 2.005L33.351 63.415c-.365.41-.91.625-1.467.578a1.741 1.741 0 0 1-1.34-.816c-3.38-5.515-7.986-12.737-11.753-18.59a2182.673 2182.673 0 0 0-4.753-7.35l-1.414-2.175-.382-.586-.098-.152c-.036-.055.008.014-.026-.038l-.006-.01-.008-.013-.007-.012v.003l-.002-.005a1.649 1.649 0 0 1 .368-2.167l.063-.049a1.777 1.777 0 0 1 2.223.1L28.571 44.43a9.106 9.106 0 0 1 1.143-2.646c1.427-2.23 3.824-3.77 7.095-5.207 2.7-1.186 6.196-2.382 10.583-3.83l-13.817-11.07c-.515 4.609-1.357 9.19-2.806 12.127-.712 1.444-1.763 2.89-3.38 3.427-1.787.593-3.512-.135-4.977-1.4l-8.742-7.556-1.093-.945-.04-.035-.016-.01a1.663 1.663 0 0 1-.68-1.312v-.059a1.66 1.66 0 0 1 .436-1.09L31.187.806a1.73 1.73 0 0 1 1.028-.747c.155-.041.313-.06.468-.059h.032l.012.001c.325.008.65.104.934.294l.072.05.07.055c.21.173.367.385.47.617L52.41 32.554c.251.436.289.958.104 1.424a1.713 1.713 0 0 1-1.063.989c-5.876 1.927-10.129 3.323-13.21 4.677-3.089 1.356-4.706 2.55-5.579 3.916a5.77 5.77 0 0 0-.706 1.618c1.625-.64 4.19-1.618 8.236-3.116l.069-.025.135-.05.067-.025.032-.012.035-.014.133-.048.066-.025.03-.011.035-.013.035-.013.03-.011.032-.011.034-.013.065-.024.065-.025.064-.023.033-.013.032-.01.064-.025.063-.023.03-.012.034-.012.064-.023.062-.024.063-.022.125-.047.061-.023.032-.011.03-.012.029-.01.064-.024.03-.011.061-.023.12-.044.06-.023.032-.012.088-.032.06-.022.059-.022.028-.01.03-.012.176-.065.116-.043.03-.011.027-.01c.062-.023-.01.004.058-.02l.03-.012.026-.01.057-.02.057-.022a.176.176 0 0 1 .03-.01c.01-.004.017-.008.025-.01l.057-.021.056-.022.055-.02.055-.02.026-.01.03-.01.11-.041.025-.01.028-.01.054-.02c.01-.004.02-.008.029-.01l.025-.01.054-.02.024-.009.029-.01c.01-.005.02-.008.029-.011l.049-.018.028-.01.106-.04.103-.039.104-.037.051-.02.023-.008.028-.011.028-.01.023-.009.05-.018.1-.037.051-.019.024-.009.025-.01.05-.018.026-.009.024-.009.048-.018.023-.008.026-.01.048-.018.049-.018.025-.01.023-.007.021-.008.027-.01.095-.035.14-.053.047-.017.047-.017.091-.034.022-.008.024-.009.025-.01.021-.007.02-.007.025-.01.09-.033.022-.008.022-.009.045-.015.023-.01.02-.007.045-.017.02-.006.024-.01.023-.008.02-.008.02-.007.024-.009.043-.016.043-.016.02-.008.023-.007.042-.016.02-.008.022-.008.024-.008.018-.007.02-.007.022-.009.042-.016.021-.007.02-.008.04-.015.042-.015.02-.007.02-.008.082-.03.04-.015a2.47 2.47 0 0 0 .023-.009l.017-.006.017-.007.023-.007.02-.008.02-.007.117-.044.02-.008.02-.006.037-.014.038-.015.04-.014.016-.006.02-.008.019-.006.02-.008.037-.014.038-.013.074-.029.02-.006.017-.006.017-.007.02-.007.015-.006.02-.008.022-.007.03-.012.02-.008.021-.007.031-.011.02-.008.036-.013.035-.013.035-.013.07-.026.018-.007.015-.005.068-.026h.001c.008-.002.015-.006.02-.008l.014-.005.015-.004.02-.008.033-.012.033-.013.017-.005.016-.007.015-.005.018-.007.033-.013.018-.005.015-.006.032-.012.015-.006.017-.007.016-.005.017-.007.019-.006.012-.005.011-.004.02-.008.02-.007.012-.005.018-.006.013-.005.014-.005.018-.006.011-.005.02-.007.019-.007.011-.005c.004 0 .008-.003.013-.005l.019-.005.03-.012.016-.006.014-.005.03-.011a.058.058 0 0 1 .017-.006l.013-.005.01-.004.02-.007.017-.007.012-.005.088-.032.014-.005.015-.006.068-.025.017-.006.029-.01c.051-.02-.017.006.027-.01a.893.893 0 0 1 .016-.006l.012-.005.011-.004.017-.007.015-.005c.005-.001.008-.004.011-.005l.055-.02.028-.01.026-.01.028-.01c.003 0 .007-.003.011-.004l.067-.025.053-.02.01-.002.015-.007.025-.009.017-.006.009-.004c.002 0 .004 0 .009-.003l.016-.005.025-.01.05-.019.024-.008.049-.018.024-.01.023-.008.025-.01.023-.007.032-.012.014-.006.018-.007.014-.005.015-.005a1.474 1.474 0 0 1 .045-.017l.015-.005.007-.003.043-.017h.002l.013-.004.009-.004.009-.003.013-.005.022-.008.021-.009.014-.004c.004 0 .006-.003.008-.004l.007-.001.014-.006.015-.005.007-.003.008-.003.012-.004.041-.016.015-.004.007-.003.008-.003.012-.005.015-.005.006-.003.003-.001.033-.012.004-.002s.004 0 .007-.002c.003 0 .007-.003.012-.005l.01-.003c.002-.002.006-.003.01-.004a.97.97 0 0 1 .016-.006l.002-.001s.004 0 .007-.002l.014-.006.02-.007.013-.005.005-.002h.002l.017-.006.016-.006.003-.002.006-.002.013-.005.018-.007c.002 0 .005 0 .008-.002l.01-.005.015-.005h.004l.019-.008.006-.002.011-.004.014-.005.003-.002h.001l.018-.007h.005l.012-.007.013-.004c.003 0 .004-.002.005-.002l.017-.007.018-.005.033-.013.017-.006h.002l.015-.007.015-.005h.002l.003-.002.014-.005.01-.004.005-.001.017-.007h.002l.013-.006.016-.006s.004 0 .007-.002l.01-.004h.002l.03-.011.027-.01.002-.001.03-.01.003-.003.012-.004.013-.005h.002l.014-.005.012-.005.003-.001.002-.001.013-.004.013-.006a.286.286 0 0 1 .014-.005l.015-.005.014-.006.012-.004.004-.002.012-.004a.292.292 0 0 0 .007-.002l.01-.004.012-.004.026-.01.011-.004h.002l.01-.005.01-.003.003-.002.025-.008v-.002a.288.288 0 0 1 .012-.003h.002l.012-.005.022-.01.012-.003h.002l.012-.006.013-.004.007-.003.004-.002h.001l.02-.007h.002c.004-.002.007-.004.01-.004l.002-.001.01-.004.02-.007.004-.002.01-.003.02-.008.009-.003h.002l.002-.002h.003l.007-.004.006-.002.004-.001.01-.003.002-.001.009-.003.02-.008.003-.001.007-.003a.267.267 0 0 1 .008-.003l.005-.002h.004l.002-.002.018-.007h.001c.003 0 .008-.003.008-.003l.004-.002.01-.004.015-.004.009-.004.01-.003.01-.005.004-.001.001-.001h.001l.01-.003h.001l.018-.007.005-.002.004-.002s.003 0 .005-.002l.016-.005.002-.002.006-.001a.535.535 0 0 1 .01-.004l.005-.001.001-.001.001-.001.01-.003.003-.001.009-.004.009-.003.004-.001.013-.006.008-.003.009-.003.014-.005.007-.002.006-.002.005-.002.001-.001.003-.001.005-.002.008-.003.005-.001.015-.006.002-.001.008-.003.004-.001.006-.003h.003l.002-.002h.002l.006-.003.005-.002h.004l.007-.004h.004l.002-.002.016-.005.004-.002h.002l.003-.002.005-.002.006-.002.005-.002h.002Zm-4.956 5.436-.023.01-.023.008-.025.009-.021.008-.047.017-.046.017-.07.026-.024.009-.094.035-.023.008-.025.01-.048.017-.026.01-.023.008-.021.009-.027.01-.023.007-.05.02-.024.008-.098.037-.021.007-.029.011-.026.01-.024.008-.05.018-.027.011-.022.008-.025.009-.026.01c-.016.005-.034.013-.05.019l-.05.018-.028.01-.024.009-.051.02-.052.018-.052.02-.024.008-.027.01c-.01.004-.02.008-.029.01l-.024.01-.025.01-.027.01-.053.019-.053.02-.053.019-.054.02-.053.02c-.03.01-.027.01-.054.02-.008.002-.016.006-.025.01l-.058.02-.026.01c-.008.002-.016.006-.025.01l-.03.01-.054.02-.03.011-.025.01-.025.009-.03.011-.03.011-.051.02-.03.01-.056.021-.057.02-.056.022-.056.02-.028.011-.03.01c-.007.004-.051.02-.056.022l-.058.02-.058.022-.058.022-.058.021-.028.011-.03.012-.06.021-.03.011-.028.01-.029.012-.03.011-.06.022-.031.011-.028.011-.029.01-.031.012-.06.022-.032.012-.03.01-.12.045-.062.023-.03.012-.031.011-.062.023-.032.012-.03.011-.062.023-.125.047-.063.022-.064.024-.032.012-.03.011-.065.024-.063.024-.033.012-.032.011-.033.012-.031.013-.064.023-.197.073c-.011.005-.023.008-.034.012l-.031.012-.067.024-.066.026-.133.048-.067.026-.035.013-.065.023-.035.014-.068.025c-5.804 2.149-8.501 3.206-9.74 3.722l-.02.008c.012.243.028.496.049.756.183 2.321.68 5.178 1.368 8.858l13.548-15.272-.003.001Zm4.99-5.449-.003.001.006-.003-.003.002ZM16.85 26.516l7.872 6.803c1.024.886 1.459.758 1.543.73.246-.082.765-.463 1.374-1.697 1.15-2.332 1.946-6.307 2.46-10.813l-13.25 4.977Zm1.848-4.304 11.759-4.416c.277-3.504.404-6.971.459-9.791.009-.465.016-.912.021-1.338L18.698 22.212Z';
-  var EEZ = null;
+  var EEZ = null, EEZ_FILL = 0.7, EEZ_DY = 0.03;
   function eezMark() {
     if (EEZ) return EEZ;
     var p = new Path2D(EEZ_D), n = 256, c = document.createElement('canvas'); c.width = n; c.height = n;
@@ -441,11 +444,11 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
   }
   // Draws the mark centred, filling `fill` of the canvas height, with optional extra stroke weight.
   function paintEEZ(g, SW, SH, k, blurPx, alpha) {
-    var m = eezMark(), s = Math.min(SH * 0.74 / m.h, SW * 0.74 / m.w);
+    var m = eezMark(), s = Math.min(SH * EEZ_FILL / m.h, SW * EEZ_FILL / m.w);
     g.save();
     g.globalAlpha = alpha;
     if (blurPx > 0 && typeof g.filter === 'string') g.filter = 'blur(' + blurPx.toFixed(1) + 'px)';
-    g.translate(SW / 2 - (m.x + m.w / 2) * s, SH / 2 - (m.y + m.h / 2) * s);
+    g.translate(SW / 2 - (m.x + m.w / 2) * s, SH * (0.5 + EEZ_DY) - (m.y + m.h / 2) * s);
     g.scale(s, s);
     if (k >= 0) { g.fillStyle = '#fff'; g.fill(m.path); }
     g.lineJoin = 'round';
@@ -463,7 +466,7 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
     var g = c.getContext('2d');
     var kw = Math.max(1, S.weight);
     paintEEZ(g, SW, SH, kw, 0, 1);
-    var m = eezMark(), s = Math.min(SH * 0.74 / m.h, SW * 0.74 / m.w);
+    var m = eezMark(), s = Math.min(SH * EEZ_FILL / m.h, SW * EEZ_FILL / m.w);
     var e = document.createElement('canvas'); e.width = SW; e.height = SH;
     var eg = e.getContext('2d');
     paintEEZ(eg, SW, SH, kw, s * 1.4, 1);                // rim ≈ one stroke width
@@ -497,7 +500,7 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
       var iw = S.image.naturalWidth, ih = S.image.naturalHeight, r = longSide / Math.max(iw, ih);
       return [Math.max(40, Math.round(iw * r)), Math.max(40, Math.round(ih * r))];
     }
-    if (S.source === 'eez') return [Math.round(longSide * 2 / 3), longSide];
+    if (S.source === 'eez') return [Math.round(longSide * 0.75), longSide];
     if (S.source === 'vbar') return [Math.round(longSide * 0.3), longSide];
     if (S.source === 'hbar') return [longSide, Math.round(longSide * 0.15)];
     return [longSide, longSide];
@@ -663,8 +666,8 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
         // light ground: a broad top-left→bottom-right drift, plus the stroke's facing to the light;
         // the stroke core (dense, not facing either way) sinks toward deep ink
         var fc = FACE[k];
-        var tl = 0.42 + 0.42 * (2 * lightAt(i, j) - 1) * la + 0.26 * fc * la + (hash(i, j, 50) - 0.5) * 0.08;
-        var cl = ramp(tl), sink = Math.min(0.68, Math.max(0, d - 0.3) * 1.4) * (1 - Math.min(1, Math.abs(fc) * 1.1));
+        var tl = 0.46 + 0.46 * (2 * lightAt(i, j) - 1) * la + 1.7 * S.edge * fc * la + (hash(i, j, 50) - 0.5) * 0.22;
+        var cl = ramp(tl), sink = S.depth * Math.min(0.68, Math.max(0, d - 0.3) * 1.4) * (1 - Math.min(1, Math.abs(fc) * 1.1));
         return [cl[0] + (INK[0] - cl[0]) * sink, cl[1] + (INK[1] - cl[1]) * sink, cl[2] + (INK[2] - cl[2]) * sink];
       }
       var lit = d * 0.3 + Math.pow(lightAt(i, j), 1.5) * 1.1 - 0.12;
@@ -682,13 +685,15 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
         var ii2 = k2 % cols, jj2 = (k2 / cols) | 0, f2 = stageN === 1 ? D[k2] : F[k2];
         var col2 = stageN === 1 ? (light ? [16, 22, 34] : [255, 255, 255]) : colorAt(ii2, jj2, f2);
         if (stageN !== 1 && !useSrc && !light) col2 = col2.map(function (x) { return x * 0.85; });
+        // light ground: the haze under the strokes leans violet, strongest away from the light
+        if (stageN !== 1 && light && !useSrc) col2 = [col2[0] + (70 - col2[0]) * 0.55, col2[1] + (104 - col2[1]) * 0.55, col2[2] + (255 - col2[2]) * 0.55];
         lid.data[k2 * 4] = col2[0]; lid.data[k2 * 4 + 1] = col2[1]; lid.data[k2 * 4 + 2] = col2[2];
-        var lf = light ? 0.35 : isImg ? 0.5 + 0.5 * la * lightAt(ii2, jj2) : 0.35 + lightAt(ii2, jj2);
+        var lf = light ? 1.8 * (1 - 0.8 * lightAt(ii2, jj2)) : isImg ? 0.5 + 0.5 * la * lightAt(ii2, jj2) : 0.35 + lightAt(ii2, jj2);
         lid.data[k2 * 4 + 3] = Math.round(255 * Math.min(1, stageN === 1 ? f2 : f2 * S.glow * 0.75 * lf));
       }
       lg.putImageData(lid, 0, 0);
       ctx.imageSmoothingEnabled = stageN !== 1;
-      if (stageN !== 1 && typeof ctx.filter === 'string') ctx.filter = 'blur(' + Math.max(1, Math.round(C * dpr * 0.6)) + 'px)';
+      if (stageN !== 1 && typeof ctx.filter === 'string') ctx.filter = 'blur(' + Math.max(1, Math.round(C * dpr * (light ? 1.25 : 0.6))) + 'px)';
       ctx.drawImage(low, 0, 0, cols * C * dpr, rows * CH * dpr);
       ctx.filter = 'none';
       if (stageN === 1) return { w: SW, h: SH };
@@ -721,11 +726,12 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
       [G(['......', '..##..', '.####.', '.####.', '..##..', '......'])],
       [G(['......', '.####.', '.#..#.', '.#..#.', '.####.', '......'])],
       [G(['.####.', '#....#', '#....#', '#....#', '#....#', '.####.'])],
-      [G(['.####.', '######', '##..##', '##..##', '######', '.####.'])],
-      [G(['.####.', '######', '##..##', '##..##', '######', '.####.'])],
-      [G(['######', '######', '##..##', '##..##', '######', '######'])]
+      [G(['.####.', '#....#', '#.##.#', '#.##.#', '#....#', '.####.'])],
+      [G(['######', '#....#', '#.##.#', '#.##.#', '#....#', '######'])],
+      [G(['######', '##..##', '#.##.#', '#.##.#', '##..##', '######'])]
     ];
     var DOTS = [LVL[0][0], LVL[1][0], G(['......', '......', '..#...', '..#...', '......', '......'])];
+    var TALL = G(['......', '..##..', '..##..', '..##..', '......', '......']);
 
     var gl = document.createElement('canvas'); gl.width = SW; gl.height = SH;
     var gctx = gl.getContext('2d'), img = gctx.createImageData(SW, SH), buf = img.data;
@@ -749,11 +755,13 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
     };
     // light ground: bolder glyph pixels and fewer dropped ones, so ink reads on white
     // light ground: a 6×6 atlas scaled to fill the cell, slightly fat pixels, nothing dropped
-    var uL = C / 6.6, pu = light ? uL * 1.2 : Math.max(1, u), drop = stageN >= 4 && !light ? S.warp * 0.3 : 0, cellId = 0;
+    var uL = C / 6.6, pu = Math.max(1, u), drop = stageN >= 4 ? S.warp * (light ? 0.5 : 0.3) : 0, cellId = 0;
     var stamp = function (glyph, ox, oy, col, a) {
       cellId++;
-      var uu = light ? uL : u;
-      if (light) { ox = ox - (C - 6 * u) / 2 + (C - 6 * uL) / 2; oy = oy - (CH - 8 * u) / 2 + (CH - 6 * uL) / 2; }
+      // the 6×6 dot atlas is scaled to fill the cell; the 6×8 stroke glyphs use the native unit
+      var small = glyph === LVL[0][0] || glyph === LVL[1][0] || glyph === LVL[2][0] || glyph === DOTS[2] || glyph === TALL;
+      var uu = small ? uL : u;
+      if (small) { ox = ox - (C - 6 * u) / 2 + (C - 6 * uL) / 2; oy = oy - (CH - 8 * u) / 2 + (CH - 6 * uL) / 2; }
       for (var p = 0; p < glyph.length; p++) {
         var hp = hash(cellId, p, 80);
         if (hp < drop) continue;
@@ -764,7 +772,30 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
     var rowShift = new Float32Array(rows);
     if (stageN >= 5) for (var r2 = 0; r2 < rows; r2++) rowShift[r2] = hash(r2, 3, 61) < 0.07 * S.warp ? Math.round((hash(r2, 4, 62) - 0.5) * 6) * u : 0;
     var colGain = new Float32Array(cols);
-    for (var c2 = 0; c2 < cols; c2++) colGain[c2] = hash(c2, 1, 63) < 0.15 ? 0.2 * hash(c2, 2, 64) : 0.5 + 0.8 * hash(c2, 2, 64);
+    for (var c2 = 0; c2 < cols; c2++) colGain[c2] = light ? 0.55 + 0.6 * hash(c2, 2, 64) : hash(c2, 1, 63) < 0.15 ? 0.2 * hash(c2, 2, 64) : 0.5 + 0.8 * hash(c2, 2, 64);
+    // light ground: a wide, tall envelope of dot columns around the whole figure
+    // Each column carries dots across its strokes and trails them up and down by its own length.
+    var HW = null;
+    if (light && stageN >= 4 && S.halo > 0) {
+      HW = new Float32Array(N);
+      var Hn = blur(D, 2, 3, 2), T6 = new Int32Array(cols), B6 = new Int32Array(cols), gTop = rows, gBot = -1;
+      for (var c5 = 0; c5 < cols; c5++) {
+        T6[c5] = -1; B6[c5] = -1;
+        for (var r6 = 0; r6 < rows; r6++) if (F[r6 * cols + c5] > 0.15) { if (T6[c5] < 0) T6[c5] = r6; B6[c5] = r6; }
+        if (T6[c5] >= 0) { gTop = Math.min(gTop, T6[c5]); gBot = Math.max(gBot, B6[c5]); }
+      }
+      for (var c6 = 0; c6 < cols; c6++) {
+        var t6 = T6[c6], b6 = B6[c6];
+        if (t6 < 0) continue;
+        var ext = Math.max(1, rows * (0.02 + 0.2 * Math.pow(hash(c6, 6, 88), 2)));
+        // columns through the apex and the tip trail much further
+        var extUp = ext * (1 + 4 * Math.exp(-(t6 - gTop) / 3)), extDn = ext * (1 + 4 * Math.exp(-(gBot - b6) / 3));
+        for (var r7 = 0; r7 < rows; r7++) {
+          var dd = r7 < t6 ? (t6 - r7) * ext / extUp : r7 > b6 ? (r7 - b6) * ext / extDn : 0;
+          HW[r7 * cols + c6] = (dd ? 0.75 * Math.exp(-dd / ext) : 0.55) + 0.45 * Math.min(1, Hn[r7 * cols + c6] * 3);
+        }
+      }
+    }
 
     // streaks: each column that crosses the figure trails thin dashes above and below it
     var STREAK = [
@@ -807,12 +838,17 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
           var sg = light ? DOTS[sv > 0.45 ? 1 : sv > 0.18 ? 0 : 2] : STREAK[Math.floor(hash(i4, j4, 92) * STREAK.length)];
           stamp(sg, ox, oy, colorAt(i4, j4, 0.25), Math.min(0.95, 0.35 + sv * 1.4));
         } else if (stageN >= 4 && S.halo > 0) {
-          var hv = H[k4] * colGain[i4] * S.halo * 4;
-          if (hv > (light ? 0.14 + 0.2 * hash(i4, j4, 72) : 0.05 + 0.1 * hash(i4, j4, 72))) stamp(LV[0][0], ox, oy, colorAt(i4, j4, 0.2), Math.min(0.9, 0.25 + hv * 1.5));
+          if (light) {
+            var hw = HW[k4] * colGain[i4] * S.halo * 1.3;
+            if (hw > 0.05 + 0.22 * hash(i4, j4, 72)) stamp(hw > 1.05 ? LVL[1][0] : hw > 0.5 ? TALL : LVL[0][0], ox, oy, colorAt(i4, j4, 0.15), Math.min(0.95, 0.5 + hw * 0.4));
+          } else {
+            var hv = H[k4] * colGain[i4] * S.halo * 4;
+            if (hv > 0.05 + 0.1 * hash(i4, j4, 72)) stamp(LV[0][0], ox, oy, colorAt(i4, j4, 0.2), Math.min(0.9, 0.25 + hv * 1.5));
+          }
         }
         continue;
       }
-      var variants = (light ? LVL : LV)[lvl], glyph = variants[Math.floor(hash(i4, j4, 73) * variants.length)];
+      var variants = LV[lvl], glyph = variants[Math.floor(hash(i4, j4, 73) * variants.length)];
       stamp(glyph, ox, oy, colorAt(i4, j4, d4), Math.min(1, (light ? 0.72 : 0.35) + 0.75 * lum));
     }
 
@@ -845,16 +881,8 @@ details .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 1
       }
       ctx.globalAlpha = 1;
     }
-    if (light && stageN >= 5 && typeof ctx.filter === 'string') {
-      // light ground: the crisp layer gets a hair of softness, like ink that bled a little
-      ctx.imageSmoothingEnabled = true;
-      ctx.filter = 'blur(' + (0.45 * dpr * scale).toFixed(2) + 'px)';
-      ctx.drawImage(gl, 0, 0, W, WH);
-      ctx.filter = 'none';
-    } else {
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(gl, 0, 0, W, WH);
-    }
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(gl, 0, 0, W, WH);
     ctx.globalCompositeOperation = 'source-over';
     return { w: SW, h: SH, cells: cols * rows };
   }
